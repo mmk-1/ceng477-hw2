@@ -20,23 +20,20 @@ int main(int argc, char *argv[])
 
         scene = new Scene(xmlPath);
 
-        std::cout << "Scene loaded." << std::endl;
-        std::cout << "Number of objects: " << scene->depth[0][0] << std::endl;
-
         for (int i = 0; i < scene->cameras.size(); i++)
         {
             // initialize image with basic values
-            // scene->initializeImage(scene->cameras[i]);
+            scene->initializeImage(scene->cameras[i]);
 
             // do forward rendering pipeline operations
-            // scene->forwardRenderingPipeline(scene->cameras[i]);
+            scene->forwardRenderingPipeline(scene->cameras[i]);
 
             // generate PPM file
-            // scene->writeImageToPPMFile(scene->cameras[i]);
+            scene->writeImageToPPMFile(scene->cameras[i]);
 
             // Converts PPM image in given path to PNG file, by calling ImageMagick's 'convert' command.
             // Change/remove implementation if necessary.
-            // scene->convertPPMToPNG(scene->cameras[i]->outputFilename);
+            scene->convertPPMToPNG(scene->cameras[i]->outputFilename);
         }
 
         return 0;

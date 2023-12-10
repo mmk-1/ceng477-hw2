@@ -347,10 +347,23 @@ void Scene::convertPPMToPNG(string ppmFileName)
 }
 
 /*
+ *********************Our Implementation starts here*********************************
+ */
+
+/*
  * Find rotation matrix based on orthonormal basis method.
  */
 Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 {
+	// calculate unit vector u
+	// find orthoronotmal basis
+	// - find min component of u, set it to 0
+	// - set v to be perpendicular to u (revers the other 2 while negating one of them)
+	// M matrix put the orthonamal basis as rows
+	// calculate rotation matrix
+	// M-1 matrix put the orthonamal basis as columns
+	// multiply M-1 * R * M
+
 	// Rotation *rotation = this->rotations[mesh->transformationIds[i] - 1];
 	Vec3 u = Vec3(rotation->ux, rotation->uy, rotation->uz);
 	Vec3 v;
@@ -386,6 +399,9 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 
 Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
 {
+	// Initalize result matrix to identity matrix
+	// multiply instead of assignment
+
 	Matrix4 result;
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
@@ -503,6 +519,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	{
 		// Model Matrix (Step 1)
 		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
+
 		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
 		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
 		for (const Triangle &triangle : mesh->triangles)
