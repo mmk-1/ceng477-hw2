@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <map>
 
 #include "tinyxml2.h"
 #include "Triangle.h"
@@ -366,7 +367,6 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 
 	// Rotation *rotation = this->rotations[mesh->transformationIds[i] - 1];
 	Vec3 u = Vec3(rotation->ux, rotation->uy, rotation->uz);
-	u = normalizeVec3(u);
 	Vec3 v;
 	double min_component = std::min(fabs(rotation->ux), fabs(rotation->uy));
 	min_component = std::min(min_component, fabs(rotation->uz));
@@ -498,6 +498,28 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 	return result;
 }
 
+Matrix4 calculate_viewport_transformation(Camera *camera)
+{
+	double nx_div_2 = camera->horRes / 2.0;
+	double ny_div_2 = camera->verRes / 2.0;
+	double nx_div_2_minus_1 = (camera->horRes - 1) / 2.0;
+	double ny_div_2_minus_1 = (camera->verRes - 1) / 2.0;
+	double M_viewport[4][4] = {{nx_div_2, 0, 0, nx_div_2_minus_1},
+							   {0, ny_div_2, 0, ny_div_2_minus_1},
+							   {0, 0, 0.5, 0.5},
+							   {0, 0, 0, 0}};
+	return Matrix4(M_viewport);
+}
+
+/* Backface culling */
+bool is_backfaced(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
+{
+	Vec3 edge0 = subtractVec3(v1, v0);
+	Vec3 edge1 = subtractVec3(v2, v0);
+	Vec3 normalVector = normalizeVec3(crossProductVec3(edge0, edge1));
+	return dotProductVec3(normalVector, v0) < 0;
+}
+
 /*
 	Transformations, clipping, culling, rasterization are done here.
 */
@@ -509,77 +531,105 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 3. Projection Transformation [X] Test []
 	// 4. Clipping [] Test []
 	// 5. Backface Culling [X] Test []
-	// 6. Viewport Transformation [] Test []
+	// 6. Viewport Transformation [X] Test []
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
+
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
+	// print_matrix4(matrix_camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
-	std::vector<std::vector<Vec3>> meshes_transformed_vertices = std::vector<std::vector<Vec3>>(meshes.size());
-	std::vector<std::vector<bool>> meshes_is_vertix_transformed = std::vector<std::vector<bool>>(meshes.size());
+	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
 
 	// Go through all meshes and apply transformations
-	for (int x = 0; x < meshes.size(); x++)
+	for (int m = 0; m < meshes.size(); m++)
 	{
-		const Mesh *mesh = meshes[x];
+		const Mesh *mesh = meshes[m];
 		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
 		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
 		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
 
-		for (int y = 0; y < mesh->triangles.size(); y++)
+		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
-			const Triangle &triangle = mesh->triangles[x];
-			std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
-			std::vector<bool> is_vertix_transformed = std::vector<bool>(this->vertices.size(), false);
-
-			for (int i = 0; i < 3; i++)
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			for (int v = 0; v < 3; v++)
 			{
-				// If vertex is already transformed, skip it
-				if (is_vertix_transformed[triangle.vertexIds[i] - 1])
+
+				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
 					continue;
 
 				// Transform vertex
-				Vec3 *vertex = this->vertices[triangle.vertexIds[i] - 1];
-				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
+				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1, vertex->colorId);
 				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z);
+				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
 
 				// Store transformed vertex
-				transformed_vertices[triangle.vertexIds[i] - 1] = transformed_vertex;
-				is_vertix_transformed[triangle.vertexIds[i] - 1] = true;
+				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
 			}
-
-			meshes_transformed_vertices.push_back(transformed_vertices);
-			meshes_is_vertix_transformed.push_back(is_vertix_transformed);
 		}
 	}
-	for (int i = 0; i < meshes.size(); i++)
+
+	for (int m = 0; m < meshes.size(); m++)
 	{
-		const Mesh *mesh = meshes[i];
-		for (int y = 0; y < mesh->triangles.size(); y++)
+		const Mesh *mesh = meshes[m];
+		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
-			// Clipping (Step 4)
-			// Culling (Step 5)
-			Vec3 v0, v1, v2;
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			// Backface culling (Step 5)
+			const Vec3 &v0 = meshes_transformed_vertices[m][triangle.vertexIds[0]];
+			const Vec3 &v1 = meshes_transformed_vertices[m][triangle.vertexIds[1]];
+			const Vec3 &v2 = meshes_transformed_vertices[m][triangle.vertexIds[2]];
 			if (this->cullingEnabled && !is_backfaced(v0, v1, v2))
 			{
 				// Do these steps only if culling is enabled and triangle is in front
+				if (mesh->type == SOLID_MESH)
+				{
+					// Solid
 
+					// Viewport Transformation (Step 6)
+					Matrix4 matrix_viewport = calculate_viewport_transformation(camera);
+					Vec4 v0_4 = Vec4(v0.x, v0.y, v0.z, 1, v0.colorId);
+					Vec4 v1_4 = Vec4(v1.x, v1.y, v1.z, 1, v1.colorId);
+					Vec4 v2_4 = Vec4(v2.x, v2.y, v2.z, 1, v2.colorId);
+					Vec4 viewportV0 = multiplyMatrixWithVec4(matrix_viewport, v0_4);
+					Vec4 viewportV1 = multiplyMatrixWithVec4(matrix_viewport, v1_4);
+					Vec4 viewportV2 = multiplyMatrixWithVec4(matrix_viewport, v2_4);
+					// Rasterization (Step 7)
+
+					// Depth Buffer (Step 8)
+				}
+				else
+				{
+					// Wireframe
+
+					// Clipping (Step 4)
+					// Rasterization (Step 7)
+					// Depth Buffer (Step 8)
+				}
 			}
 		}
 	}
 }
 
-/* Backface culling */
-bool is_backfaced(Vec3 &v0, Vec3 &v1, Vec3 &v2)
+/*
+ *********************Our Implementation ends here*********************************
+ */
+
+/*
+**********************Test functions starts here*********************************
+*/
+
+void print_matrix4(Matrix4 matrix)
 {
-	// Vec3 v_0 = Vec3(v0.x, v0.y, v0.z, v0.colorId);
-	// Vec3 v_1 = Vec3(v1.x, v1.y, v1.z, v1.colorId);
-	// Vec3 v_2 = Vec3(v2.x, v2.y, v2.z, v2.colorId);
-	Vec3 edge01 = subtractVec3(v1, v0);
-	Vec3 edge02 = subtractVec3(v2, v0);
-	Vec3 normalVector = normalizeVec3(crossProductVec3(edge01, edge02));
-	// double res = dotProductVec3(normalVector, v0);
-	return dotProductVec3(normalVector, v0) < 0;
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "[";
+		for (int j = 0; j < 4; j++)
+		{
+			cout << matrix.values[i][j] << " ";
+		}
+		cout << "]" << endl;
+	}
 }
