@@ -508,7 +508,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 2. Camera Transformation [X] Test [X]
 	// 3. Projection Transformation [X] Test []
 	// 4. Clipping [] Test []
-	// 5. Backface Culling [] Test []
+	// 5. Backface Culling [X] Test []
 	// 6. Viewport Transformation [] Test []
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
@@ -554,8 +554,32 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			meshes_is_vertix_transformed.push_back(is_vertix_transformed);
 		}
 	}
+	for (int i = 0; i < meshes.size(); i++)
+	{
+		const Mesh *mesh = meshes[i];
+		for (int y = 0; y < mesh->triangles.size(); y++)
+		{
+			// Clipping (Step 4)
+			// Culling (Step 5)
+			Vec3 v0, v1, v2;
+			if (this->cullingEnabled && !is_backfaced(v0, v1, v2))
+			{
+				// Do these steps only if culling is enabled and triangle is in front
 
-	// Clipping (Step 4)
+			}
+		}
+	}
+}
 
-	// Culling (Step 5)
+/* Backface culling */
+bool is_backfaced(Vec3 &v0, Vec3 &v1, Vec3 &v2)
+{
+	// Vec3 v_0 = Vec3(v0.x, v0.y, v0.z, v0.colorId);
+	// Vec3 v_1 = Vec3(v1.x, v1.y, v1.z, v1.colorId);
+	// Vec3 v_2 = Vec3(v2.x, v2.y, v2.z, v2.colorId);
+	Vec3 edge01 = subtractVec3(v1, v0);
+	Vec3 edge02 = subtractVec3(v2, v0);
+	Vec3 normalVector = normalizeVec3(crossProductVec3(edge01, edge02));
+	// double res = dotProductVec3(normalVector, v0);
+	return dotProductVec3(normalVector, v0) < 0;
 }
