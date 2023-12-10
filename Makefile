@@ -8,3 +8,7 @@ rasterizer_cpp:
 
 clean:
 		rm -f rasterizer
+
+run: clean all
+	./rasterizer $$(cat scene.txt)
+
