@@ -511,20 +511,51 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 6. Viewport Transformation
 	// 7. Rasterization
 	// 8. Depth Buffer
+
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
-	// Go through all meshes and apply transformations
-	for (const Mesh *const &mesh : meshes)
-	{
-		// Model Matrix (Step 1)
-		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
+	std::vector<std::vector<Vec3>> meshes_transformed_vertices = std::vector<std::vector<Vec3>>(meshes.size());
+	std::vector<std::vector<bool>> meshes_is_vertix_transformed = std::vector<std::vector<bool>>(meshes.size());
 
+	// Go through all meshes and apply transformations
+	for (int x = 0; x < meshes.size(); x++)
+	{
+		const Mesh *mesh = meshes[x];
+		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
 		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
 		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
-		for (const Triangle &triangle : mesh->triangles)
+
+		for (int y = 0; y < mesh->triangles.size(); y++)
 		{
-			// Steps 4 - ?
+			const Triangle &triangle = mesh->triangles[x];
+			std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
+			std::vector<bool> is_vertix_transformed = std::vector<bool>(this->vertices.size(), false);
+
+			for (int i = 0; i < 3; i++)
+			{
+				// If vertex is already transformed, skip it
+				if (is_vertix_transformed[triangle.vertexIds[i] - 1])
+					continue;
+
+				// Transform vertex
+				Vec3 *vertex = this->vertices[triangle.vertexIds[i] - 1];
+				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
+
+				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z);
+
+				// Store transformed vertex
+				transformed_vertices[triangle.vertexIds[i] - 1] = transformed_vertex;
+				is_vertix_transformed[triangle.vertexIds[i] - 1] = true;
+			}
+
+			meshes_transformed_vertices.push_back(transformed_vertices);
+			meshes_is_vertix_transformed.push_back(is_vertix_transformed);
 		}
 	}
+
+	// Clipping (Step 4)
+
+	// Culling (Step 5)
 }
