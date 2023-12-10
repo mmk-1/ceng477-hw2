@@ -33,6 +33,7 @@ public:
 	void writeImageToPPMFile(Camera *camera);
 	void convertPPMToPNG(std::string ppmFileName);
 	void forwardRenderingPipeline(Camera *camera);
+	Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
 };
 
 #endif

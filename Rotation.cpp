@@ -2,7 +2,8 @@
 #include <iostream>
 #include "Rotation.h"
 
-Rotation::Rotation() {
+Rotation::Rotation()
+{
     this->rotationId = -1;
     this->angle = 0;
     this->ux = 0;

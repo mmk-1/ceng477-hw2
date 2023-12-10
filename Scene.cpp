@@ -351,5 +351,146 @@ void Scene::convertPPMToPNG(string ppmFileName)
 */
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
-	// TODO: Implement this function
+	// Overall steps:
+	// 1. Model Transformation X
+	// 2. Camera Transformation X
+	// 3. Projection Transformation X
+	// 4. Clipping
+	// 5. Backface Culling
+	// 6. Viewport Transformation
+	// 7. Rasterization
+	Matrix4 matrix_camera = calculate_camera_transformation(camera);
+	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
+
+	// Go through all meshes and apply transformations
+	for (const Mesh *const &mesh : meshes)
+	{
+		// Model Matrix (Step 1)
+		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
+	}
+}
+
+/*
+ * Find rotation matrix based on orthonormal basis method.
+ */
+Matrix4 calculate_rotation_transformation(const Rotation *rotation)
+{
+	// Rotation *rotation = this->rotations[mesh->transformationIds[i] - 1];
+	Vec3 u = Vec3(rotation->ux, rotation->uy, rotation->uz);
+	Vec3 v;
+	double min_component = std::min(fabs(rotation->ux), fabs(rotation->uy));
+	min_component = std::min(min_component, fabs(rotation->uz));
+
+	// Set V vector
+	if (min_component == abs(rotation->ux))
+		v = Vec3(0, -1 * rotation->uz, rotation->uy, -1);
+	else if (min_component == abs(rotation->uy))
+		v = Vec3(-1 * rotation->uz, 0, rotation->ux, -1);
+	else if (min_component == abs(rotation->uz))
+		v = Vec3(-1 * rotation->uy, rotation->ux, 0, -1);
+
+	v = normalizeVec3(v);
+	Vec3 w = crossProductVec3(u, v);
+	w = normalizeVec3(w);
+
+	// M
+	double m[4][4] = {{u.x, u.y, u.z, 0}, {v.x, v.y, v.z, 0}, {w.x, w.y, w.z, 0}, {0, 0, 0, 1}};
+	Matrix4 m_matrix(m);
+	// M^-1
+	double m_inverse[4][4] = {{u.x, v.x, w.x, 0}, {u.y, v.y, w.y, 0}, {u.z, v.z, w.z, 0}, {0, 0, 0, 1}};
+	Matrix4 m_matrix_inverse(m_inverse);
+	// R
+	double cosine_res = cos(rotation->angle * M_PI / 180);
+	double sine_res = sin(rotation->angle * M_PI / 180);
+	double r[4][4] = {{1, 0, 0, 0}, {0, cosine_res, (-1) * sine_res, 0}, {0, sine_res, cosine_res, 0}, {0, 0, 0, 1}};
+	Matrix4 r_matrix(r);
+	// M^-1 * R * M
+	return multiplyMatrixWithMatrix(m_matrix_inverse, multiplyMatrixWithMatrix(r_matrix, m_matrix));
+};
+
+Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
+{
+	Matrix4 result;
+	for (int i = 0; i < mesh->numberOfTransformations; i++)
+	{
+		// Be careful that transormationIds are 1-indexed
+		switch (mesh->transformationTypes[i])
+		{
+			{
+			case 'r':
+				Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
+				result = calculate_rotation_transformation(rotation);
+				break;
+			case 't':
+				Translation *t = scene->translations[mesh->transformationIds[i] - 1];
+				double tMatrix[4][4] = {{1, 0, 0, t->tx}, {0, 1, 0, t->ty}, {0, 0, 1, t->tz}, {0, 0, 0, 1}};
+				result = tMatrix;
+				break;
+			case 's':
+				Scaling *s = scene->scalings[mesh->transformationIds[i] - 1];
+				double sMatrix[4][4] = {{s->sx, 0, 0, 0}, {0, s->sy, 0, 0}, {0, 0, s->sz, 0}, {0, 0, 0, 1}};
+				result = sMatrix;
+				break;
+			default:
+				cout << "Invalid transformation type" << endl;
+				exit(1);
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+Matrix4 calculate_camera_transformation(const Camera *camera)
+{
+	// Translation matrix
+	const Vec3 &position = camera->position;
+	double t[4][4] = {{1, 0, 0, -(position.x)}, {0, 1, 0, -(position.y)}, {0, 0, 1, -(position.z)}, {0, 0, 0, 1}};
+
+	// Rotation matrix
+	const Vec3 u = camera->u;
+	const Vec3 v = camera->v;
+	const Vec3 w = camera->w;
+	double r[4][4] = {{u.x, u.y, u.z, 0}, {v.x, v.y, v.z, 0}, {w.x, w.y, w.z, 0}, {0, 0, 0, 1}};
+
+	// Cast to Matrix4
+	Matrix4 r_matrix(r);
+	Matrix4 t_matrix(t);
+
+	return multiplyMatrixWithMatrix(r_matrix, t_matrix);
+}
+
+Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
+{
+	Matrix4 result;
+	double left = camera->left;
+	double right = camera->right;
+	double bottom = camera->bottom;
+	double top = camera->top;
+	double near = camera->near;
+	double far = camera->far;
+	switch (type)
+	{
+	case false:
+		// Orthographic
+		double matrix_orth[4][4] = {
+			{2 / (right - left), 0, 0, -((right + left) / (right - left))},
+			{0, 2 / (top - bottom), 0, -((top + bottom) / (top - bottom))},
+			{0, 0, -(2 / (far - near)), -((far + near) / (far - near))},
+			{0, 0, 0, 1}};
+
+		result = Matrix4(matrix_orth);
+		break;
+	default:
+		// Perspective
+		double matrix_perspective[4][4] = {
+			{(2 * near) / (right - left), 0, (right + left) / (right - left), 0},
+			{0, (2 * near) / (top - bottom), (top + bottom) / (top - bottom), 0},
+			{0, 0, -((far + near) / (far - near)), -((2 * far * near) / (far - near))},
+			{0, 0, -1, 0}};
+
+		result = Matrix4(matrix_perspective);
+		break;
+	}
+	return result;
 }

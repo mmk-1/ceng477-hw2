@@ -1,6 +1,15 @@
 #include <iostream>
 #include <cmath>
+#include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <iomanip>
+#include <cstring>
+#include <string>
+#include <vector>
 #include "Helpers.h"
+#include "Rotation.h"
+#include "Mesh.h"
 
 /*
  * Calculate cross product of vec3 a, vec3 b and return resulting vec3.
