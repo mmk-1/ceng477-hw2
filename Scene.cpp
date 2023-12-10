@@ -366,17 +366,18 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 
 	// Rotation *rotation = this->rotations[mesh->transformationIds[i] - 1];
 	Vec3 u = Vec3(rotation->ux, rotation->uy, rotation->uz);
+	u = normalizeVec3(u);
 	Vec3 v;
 	double min_component = std::min(fabs(rotation->ux), fabs(rotation->uy));
 	min_component = std::min(min_component, fabs(rotation->uz));
 
 	// Set V vector
-	if (min_component == abs(rotation->ux))
-		v = Vec3(0, -1 * rotation->uz, rotation->uy, -1);
-	else if (min_component == abs(rotation->uy))
-		v = Vec3(-1 * rotation->uz, 0, rotation->ux, -1);
-	else if (min_component == abs(rotation->uz))
-		v = Vec3(-1 * rotation->uy, rotation->ux, 0, -1);
+	if (min_component == fabs(rotation->ux))
+		v = Vec3(0, -1 * rotation->uz, rotation->uy);
+	else if (min_component == fabs(rotation->uy))
+		v = Vec3(-1 * rotation->uz, 0, rotation->ux);
+	else if (min_component == fabs(rotation->uz))
+		v = Vec3(-1 * rotation->uy, rotation->ux, 0);
 
 	v = normalizeVec3(v);
 	Vec3 w = crossProductVec3(u, v);
@@ -402,7 +403,7 @@ Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
 	// Initalize result matrix to identity matrix
 	// multiply instead of assignment
 
-	Matrix4 result;
+	Matrix4 result = getIdentityMatrix();
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
 		// Be careful that transormationIds are 1-indexed
@@ -411,21 +412,21 @@ Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
 		case 'r':
 		{
 			Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
-			result = calculate_rotation_transformation(rotation);
+			result = multiplyMatrixWithMatrix(result, calculate_rotation_transformation(rotation));
 		}
 		break;
 		case 't':
 		{
 			Translation *translation = scene->translations[mesh->transformationIds[i] - 1];
 			double translation_matrix[4][4] = {{1, 0, 0, translation->tx}, {0, 1, 0, translation->ty}, {0, 0, 1, translation->tz}, {0, 0, 0, 1}};
-			result = translation_matrix;
+			result = multiplyMatrixWithMatrix(result, translation_matrix);
 		}
 		break;
 		case 's':
 		{
 			Scaling *scale = scene->scalings[mesh->transformationIds[i] - 1];
 			double scale_matrix[4][4] = {{scale->sx, 0, 0, 0}, {0, scale->sy, 0, 0}, {0, 0, scale->sz, 0}, {0, 0, 0, 1}};
-			result = scale_matrix;
+			result = multiplyMatrixWithMatrix(result, scale_matrix);
 		}
 		break;
 		default:
@@ -503,15 +504,14 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
 	// Overall steps:
-	// 1. Model Transformation X Test
-	// 2. Camera Transformation X Test X
-	// 3. Projection Transformation X Test
-	// 4. Clipping
-	// 5. Backface Culling
-	// 6. Viewport Transformation
-	// 7. Rasterization
-	// 8. Depth Buffer
-
+	// 1. Model Transformation [X] Test []
+	// 2. Camera Transformation [X] Test [X]
+	// 3. Projection Transformation [X] Test []
+	// 4. Clipping [] Test []
+	// 5. Backface Culling [] Test []
+	// 6. Viewport Transformation [] Test []
+	// 7. Rasterization [] Test []
+	// 8. Depth Buffer [] Test []
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
