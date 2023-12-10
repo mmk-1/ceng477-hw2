@@ -347,30 +347,6 @@ void Scene::convertPPMToPNG(string ppmFileName)
 }
 
 /*
-	Transformations, clipping, culling, rasterization are done here.
-*/
-void Scene::forwardRenderingPipeline(Camera *camera)
-{
-	// Overall steps:
-	// 1. Model Transformation X
-	// 2. Camera Transformation X
-	// 3. Projection Transformation X
-	// 4. Clipping
-	// 5. Backface Culling
-	// 6. Viewport Transformation
-	// 7. Rasterization
-	Matrix4 matrix_camera = calculate_camera_transformation(camera);
-	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
-
-	// Go through all meshes and apply transformations
-	for (const Mesh *const &mesh : meshes)
-	{
-		// Model Matrix (Step 1)
-		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
-	}
-}
-
-/*
  * Find rotation matrix based on orthonormal basis method.
  */
 Matrix4 calculate_rotation_transformation(const Rotation *rotation)
@@ -493,4 +469,39 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 		break;
 	}
 	return result;
+}
+
+/*
+	Transformations, clipping, culling, rasterization are done here.
+*/
+void Scene::forwardRenderingPipeline(Camera *camera)
+{
+	// Overall steps:
+	// 1. Model Transformation X
+	// 2. Camera Transformation X
+	// 3. Projection Transformation X
+	// 4. Clipping
+	// 5. Backface Culling
+	// 6. Viewport Transformation
+	// 7. Rasterization
+	// 8. Depth Buffer
+	Matrix4 matrix_camera = calculate_camera_transformation(camera);
+	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
+
+	// Go through all meshes and apply transformations
+	for (const Mesh *const &mesh : meshes)
+	{
+		// Model Matrix (Step 1)
+		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
+		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
+		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
+		for (const Triangle &triangle : mesh->triangles)
+		{
+			// Steps 4 => 5 => 6 => 7
+			// 4. Clipping
+			// 5. Backface Culling
+			// 6. Viewport Transformation
+			// 7. Rasterization
+		}
+	}
 }
