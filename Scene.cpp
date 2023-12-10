@@ -498,6 +498,28 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 	return result;
 }
 
+Matrix4 calculate_viewport_transformation(Camera *camera)
+{
+	double nx_div_2 = camera->horRes / 2.0;
+	double ny_div_2 = camera->verRes / 2.0;
+	double nx_div_2_minus_1 = (camera->horRes - 1) / 2.0;
+	double ny_div_2_minus_1 = (camera->verRes - 1) / 2.0;
+	double M_viewport[4][4] = {{nx_div_2, 0, 0, nx_div_2_minus_1},
+							   {0, ny_div_2, 0, ny_div_2_minus_1},
+							   {0, 0, 0.5, 0.5},
+							   {0, 0, 0, 0}};
+	return Matrix4(M_viewport);
+}
+
+/* Backface culling */
+bool is_backfaced(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
+{
+	Vec3 edge0 = subtractVec3(v1, v0);
+	Vec3 edge1 = subtractVec3(v2, v0);
+	Vec3 normalVector = normalizeVec3(crossProductVec3(edge0, edge1));
+	return dotProductVec3(normalVector, v0) < 0;
+}
+
 bool is_visible(double den, double num, double &te, double &tl)
 {
 	if (den > 0)
@@ -573,13 +595,13 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 2. Camera Transformation [X] Test [X]
 	// 3. Projection Transformation [X] Test []
 	// 4. Clipping [] Test []
-	// 5. Backface Culling [] Test []
-	// 6. Viewport Transformation [] Test []
+	// 5. Backface Culling [X] Test []
+	// 6. Viewport Transformation [X] Test []
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
 
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
-	print_matrix4(matrix_camera);
+	// print_matrix4(matrix_camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
 	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
@@ -606,7 +628,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
 				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z);
+				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
 
 				// Store transformed vertex
 				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
@@ -614,39 +636,72 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		}
 	}
 
-	// Culling (Step 5)
-	std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
-	// Clipping (Step 4)
 	for (int m = 0; m < meshes.size(); m++)
 	{
 		const Mesh *mesh = meshes[m];
-		if (mesh->type == WIREFRAME_MESH)
-			continue;
-
-		// for (int y = 0; y < mesh->triangles.size(); y++)
-		// {
-		// 	const Triangle &triangle = mesh->triangles[y];
-		// }
-	}
-}
-
-/*
- *********************Our Implementation ends here*********************************
- */
-
-/*
-**********************Test functions starts here*********************************
-*/
-
-void print_matrix4(Matrix4 matrix)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		cout << "[";
-		for (int j = 0; j < 4; j++)
+		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
-			cout << matrix.values[i][j] << " ";
-		}
-		cout << "]" << endl;
-	}
-}
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			// Backface culling (Step 5)
+			const Vec3 &v0 = meshes_transformed_vertices[m][triangle.vertexIds[0]];
+			const Vec3 &v1 = meshes_transformed_vertices[m][triangle.vertexIds[1]];
+			const Vec3 &v2 = meshes_transformed_vertices[m][triangle.vertexIds[2]];
+			if (this->cullingEnabled && !is_backfaced(v0, v1, v2))
+			{
+				// Do these steps only if culling is enabled and triangle is in front
+				if (mesh->type == SOLID_MESH)
+				{
+					// Solid
+
+					// Viewport Transformation (Step 6)
+					Matrix4 matrix_viewport = calculate_viewport_transformation(camera);
+					Vec4 v0_4 = Vec4(v0.x, v0.y, v0.z, 1, v0.colorId);
+					Vec4 v1_4 = Vec4(v1.x, v1.y, v1.z, 1, v1.colorId);
+					Vec4 v2_4 = Vec4(v2.x, v2.y, v2.z, 1, v2.colorId);
+					Vec4 viewportV0 = multiplyMatrixWithVec4(matrix_viewport, v0_4);
+					Vec4 viewportV1 = multiplyMatrixWithVec4(matrix_viewport, v1_4);
+					Vec4 viewportV2 = multiplyMatrixWithVec4(matrix_viewport, v2_4);
+					// Rasterization (Step 7)
+
+					// Depth Buffer (Step 8)
+				}
+				else
+				{
+					// Wireframe
+
+					// Culling (Step 5)
+					std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
+					// Clipping (Step 4)
+					for (int m = 0; m < meshes.size(); m++)
+					{
+						const Mesh *mesh = meshes[m];
+						if (mesh->type == WIREFRAME_MESH)
+							continue;
+
+						// for (int y = 0; y < mesh->triangles.size(); y++)
+						// {
+						// 	const Triangle &triangle = mesh->triangles[y];
+						// }
+					}
+				}
+
+				/*
+				 *********************Our Implementation ends here*********************************
+				 */
+
+				/*
+				**********************Test functions starts here*********************************
+				*/
+
+				void print_matrix4(Matrix4 matrix)
+				{
+					for (int i = 0; i < 4; i++)
+					{
+						cout << "[";
+						for (int j = 0; j < 4; j++)
+						{
+							cout << matrix.values[i][j] << " ";
+						}
+						cout << "]" << endl;
+					}
+				}
