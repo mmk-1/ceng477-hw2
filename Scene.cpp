@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <map>
 
 #include "tinyxml2.h"
 #include "Triangle.h"
@@ -366,7 +367,6 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 
 	// Rotation *rotation = this->rotations[mesh->transformationIds[i] - 1];
 	Vec3 u = Vec3(rotation->ux, rotation->uy, rotation->uz);
-	u = normalizeVec3(u);
 	Vec3 v;
 	double min_component = std::min(fabs(rotation->ux), fabs(rotation->uy));
 	min_component = std::min(min_component, fabs(rotation->uz));
@@ -512,50 +512,76 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 6. Viewport Transformation [] Test []
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
+
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
+	print_matrix4(matrix_camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
-	std::vector<std::vector<Vec3>> meshes_transformed_vertices = std::vector<std::vector<Vec3>>(meshes.size());
-	std::vector<std::vector<bool>> meshes_is_vertix_transformed = std::vector<std::vector<bool>>(meshes.size());
+	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
 
 	// Go through all meshes and apply transformations
-	for (int x = 0; x < meshes.size(); x++)
+	for (int m = 0; m < meshes.size(); m++)
 	{
-		const Mesh *mesh = meshes[x];
+		const Mesh *mesh = meshes[m];
 		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
 		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
 		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
 
-		for (int y = 0; y < mesh->triangles.size(); y++)
+		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
-			const Triangle &triangle = mesh->triangles[x];
-			std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
-			std::vector<bool> is_vertix_transformed = std::vector<bool>(this->vertices.size(), false);
-
-			for (int i = 0; i < 3; i++)
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			for (int v = 0; v < 3; v++)
 			{
-				// If vertex is already transformed, skip it
-				if (is_vertix_transformed[triangle.vertexIds[i] - 1])
+
+				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
 					continue;
 
 				// Transform vertex
-				Vec3 *vertex = this->vertices[triangle.vertexIds[i] - 1];
+				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
 				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
 				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
 				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z);
 
 				// Store transformed vertex
-				transformed_vertices[triangle.vertexIds[i] - 1] = transformed_vertex;
-				is_vertix_transformed[triangle.vertexIds[i] - 1] = true;
+				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
 			}
-
-			meshes_transformed_vertices.push_back(transformed_vertices);
-			meshes_is_vertix_transformed.push_back(is_vertix_transformed);
 		}
 	}
 
 	// Clipping (Step 4)
+	for (int m = 0; m < meshes.size(); m++)
+	{
+		const Mesh *mesh = meshes[m];
+		if (mesh->type == WIREFRAME_MESH)
+			continue;
 
-	// Culling (Step 5)
+		// for (int y = 0; y < mesh->triangles.size(); y++)
+		// {
+		// 	const Triangle &triangle = mesh->triangles[y];
+		// }
+
+		// Culling (Step 5)
+	}
+}
+
+/*
+ *********************Our Implementation ends here*********************************
+ */
+
+/*
+**********************Test functions starts here*********************************
+*/
+
+void print_matrix4(Matrix4 matrix)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "[";
+		for (int j = 0; j < 4; j++)
+		{
+			cout << matrix.values[i][j] << " ";
+		}
+		cout << "]" << endl;
+	}
 }

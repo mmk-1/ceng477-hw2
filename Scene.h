@@ -40,5 +40,5 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation);
 Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
 Matrix4 calculate_camera_transformation(const Camera *camera);
 Matrix4 calculate_projection_transformation(const Camera *camera, bool type);
-
+void print_matrix4(Matrix4 matrix);
 #endif
