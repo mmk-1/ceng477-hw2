@@ -31,6 +31,8 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation);
 Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
 Matrix4 calculate_camera_transformation(const Camera *camera);
 Matrix4 calculate_projection_transformation(const Camera *camera, bool type);
+Matrix4 calculate_viewport_transformation(Camera *camera);
+bool is_backfaced(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2);
 void print_matrix4(Matrix4 matrix);
 bool is_visible(double den, double num, double &te, double &tl);
 Line clip_line(Line &line, bool &visible, double x_min, double x_max, double y_min, double y_max);

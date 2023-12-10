@@ -684,24 +684,28 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 						// }
 					}
 				}
+			}
+		}
+	}
+}
 
-				/*
-				 *********************Our Implementation ends here*********************************
-				 */
+/*
+ *********************Our Implementation ends here*********************************
+ */
 
-				/*
-				**********************Test functions starts here*********************************
-				*/
+/*
+**********************Test functions starts here*********************************
+*/
 
-				void print_matrix4(Matrix4 matrix)
-				{
-					for (int i = 0; i < 4; i++)
-					{
-						cout << "[";
-						for (int j = 0; j < 4; j++)
-						{
-							cout << matrix.values[i][j] << " ";
-						}
-						cout << "]" << endl;
-					}
-				}
+void print_matrix4(Matrix4 matrix)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "[";
+		for (int j = 0; j < 4; j++)
+		{
+			cout << matrix.values[i][j] << " ";
+		}
+		cout << "]" << endl;
+	}
+}
