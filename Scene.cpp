@@ -392,26 +392,32 @@ Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
 		// Be careful that transormationIds are 1-indexed
 		switch (mesh->transformationTypes[i])
 		{
-			{
-			case 'r':
-				Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
-				result = calculate_rotation_transformation(rotation);
-				break;
-			case 't':
-				Translation *t = scene->translations[mesh->transformationIds[i] - 1];
-				double tMatrix[4][4] = {{1, 0, 0, t->tx}, {0, 1, 0, t->ty}, {0, 0, 1, t->tz}, {0, 0, 0, 1}};
-				result = tMatrix;
-				break;
-			case 's':
-				Scaling *s = scene->scalings[mesh->transformationIds[i] - 1];
-				double sMatrix[4][4] = {{s->sx, 0, 0, 0}, {0, s->sy, 0, 0}, {0, 0, s->sz, 0}, {0, 0, 0, 1}};
-				result = sMatrix;
-				break;
-			default:
-				cout << "Invalid transformation type" << endl;
-				exit(1);
-				break;
-			}
+		case 'r':
+		{
+			Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
+			result = calculate_rotation_transformation(rotation);
+		}
+		break;
+		case 't':
+		{
+			Translation *translation = scene->translations[mesh->transformationIds[i] - 1];
+			double translation_matrix[4][4] = {{1, 0, 0, translation->tx}, {0, 1, 0, translation->ty}, {0, 0, 1, translation->tz}, {0, 0, 0, 1}};
+			result = translation_matrix;
+		}
+		break;
+		case 's':
+		{
+			Scaling *scale = scene->scalings[mesh->transformationIds[i] - 1];
+			double scale_matrix[4][4] = {{scale->sx, 0, 0, 0}, {0, scale->sy, 0, 0}, {0, 0, scale->sz, 0}, {0, 0, 0, 1}};
+			result = scale_matrix;
+		}
+		break;
+		default:
+		{
+			cout << "Invalid transformation type" << endl;
+			exit(1);
+		}
+		break;
 		}
 	}
 	return result;
@@ -448,6 +454,7 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 	switch (type)
 	{
 	case false:
+	{
 		// Orthographic
 		double matrix_orth[4][4] = {
 			{2 / (right - left), 0, 0, -((right + left) / (right - left))},
@@ -456,8 +463,10 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 			{0, 0, 0, 1}};
 
 		result = Matrix4(matrix_orth);
-		break;
+	}
+	break;
 	default:
+	{
 		// Perspective
 		double matrix_perspective[4][4] = {
 			{(2 * near) / (right - left), 0, (right + left) / (right - left), 0},
@@ -466,7 +475,8 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 			{0, 0, -1, 0}};
 
 		result = Matrix4(matrix_perspective);
-		break;
+	}
+	break;
 	}
 	return result;
 }
@@ -479,7 +489,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// Overall steps:
 	// 1. Model Transformation X Test
 	// 2. Camera Transformation X Test X
-	// 3. Projection Transformation X Test 
+	// 3. Projection Transformation X Test
 	// 4. Clipping
 	// 5. Backface Culling
 	// 6. Viewport Transformation

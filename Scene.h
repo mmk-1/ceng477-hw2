@@ -8,6 +8,7 @@
 #include "Translation.h"
 #include "Camera.h"
 #include "Mesh.h"
+#include "Matrix4.h"
 
 class Scene
 {
@@ -15,8 +16,8 @@ public:
 	Color backgroundColor;
 	bool cullingEnabled;
 
-	std::vector<std::vector<Color> > image;
-	std::vector<std::vector<double> > depth;
+	std::vector<std::vector<Color>> image;
+	std::vector<std::vector<double>> depth;
 	std::vector<Camera *> cameras;
 	std::vector<Vec3 *> vertices;
 	std::vector<Color *> colorsOfVertices;
@@ -33,7 +34,11 @@ public:
 	void writeImageToPPMFile(Camera *camera);
 	void convertPPMToPNG(std::string ppmFileName);
 	void forwardRenderingPipeline(Camera *camera);
-	Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
 };
+
+Matrix4 calculate_rotation_transformation(const Rotation *rotation);
+Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
+Matrix4 calculate_camera_transformation(const Camera *camera);
+Matrix4 calculate_projection_transformation(const Camera *camera, bool type);
 
 #endif
