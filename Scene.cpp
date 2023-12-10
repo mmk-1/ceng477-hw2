@@ -497,11 +497,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
 		for (const Triangle &triangle : mesh->triangles)
 		{
-			// Steps 4 => 5 => 6 => 7
-			// 4. Clipping
-			// 5. Backface Culling
-			// 6. Viewport Transformation
-			// 7. Rasterization
+			// Steps 4 - ?
 		}
 	}
 }
