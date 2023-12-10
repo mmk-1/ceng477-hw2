@@ -10,6 +10,31 @@
 #include "Mesh.h"
 #include "Matrix4.h"
 
+struct Line
+{
+	double x0, y0, x1, y1, z0, z1;
+	Color c0, c1;
+	Line(double x0, double y0, double x1, double y1, double z0, double z1, Color c0, Color c1)
+	{
+		this->x0 = x0;
+		this->y0 = y0;
+		this->x1 = x1;
+		this->y1 = y1;
+		this->z0 = z0;
+		this->z1 = z1;
+		this->c0 = c0;
+		this->c1 = c1;
+	}
+};
+
+Matrix4 calculate_rotation_transformation(const Rotation *rotation);
+Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
+Matrix4 calculate_camera_transformation(const Camera *camera);
+Matrix4 calculate_projection_transformation(const Camera *camera, bool type);
+void print_matrix4(Matrix4 matrix);
+bool is_visible(double den, double num, double &te, double &tl);
+Line clip_line(Line &line, bool &visible, double x_min, double x_max, double y_min, double y_max);
+
 class Scene
 {
 public:
@@ -36,9 +61,4 @@ public:
 	void forwardRenderingPipeline(Camera *camera);
 };
 
-Matrix4 calculate_rotation_transformation(const Rotation *rotation);
-Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene);
-Matrix4 calculate_camera_transformation(const Camera *camera);
-Matrix4 calculate_projection_transformation(const Camera *camera, bool type);
-void print_matrix4(Matrix4 matrix);
 #endif

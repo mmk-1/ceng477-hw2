@@ -498,6 +498,71 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 	return result;
 }
 
+bool is_visible(double den, double num, double &te, double &tl)
+{
+	if (den > 0)
+	{
+		double t = num / den;
+		if (t > tl)
+			return false;
+
+		if (t > te)
+			te = t;
+	}
+	else if (den < 0)
+	{
+		double t = num / den;
+		if (t < te)
+			return false;
+
+		if (t < tl)
+			tl = t;
+	}
+	else if (num > 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+Line clip_line(Line &line, bool &visible, double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
+{
+	// Lian-Barsky Algorithm
+	double te = 0;
+	double tl = 1;
+	double dx = line.x1 - line.x0;
+	double dy = line.y1 - line.y0;
+	double dz = line.z1 - line.z0;
+	visible = false;
+	if (is_visible(dx, x_min - line.x0, te, tl) &&
+		is_visible(-dx, line.x0 - x_max, te, tl) &&
+		is_visible(dy, y_min - line.y0, te, tl) &&
+		is_visible(-dy, line.y0 - y_max, te, tl) &&
+		is_visible(dz, z_min - line.z0, te, tl) &&
+		is_visible(-dz, line.z0 - z_max, te, tl))
+	{
+		visible = true;
+		if (tl < 1)
+		{
+			line.x1 = line.x0 + tl * dx;
+			line.y1 = line.y0 + tl * dy;
+			line.z1 = line.z0 + tl * dz;
+			line.c1.r = line.c0.r + tl * (line.c1.r - line.c0.r);
+			line.c1.g = line.c0.g + tl * (line.c1.g - line.c0.g);
+			line.c1.b = line.c0.b + tl * (line.c1.b - line.c0.b);
+		}
+		if (te > 0)
+		{
+			line.x0 = line.x0 + te * dx;
+			line.y0 = line.y0 + te * dy;
+			line.z0 = line.z0 + te * dz;
+			line.c0.r = line.c0.r + te * (line.c1.r - line.c0.r);
+			line.c0.g = line.c0.g + te * (line.c1.g - line.c0.g);
+			line.c0.b = line.c0.b + te * (line.c1.b - line.c0.b);
+		}
+	}
+}
+
 /*
 	Transformations, clipping, culling, rasterization are done here.
 */
@@ -549,6 +614,8 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		}
 	}
 
+	// Culling (Step 5)
+	std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
 	// Clipping (Step 4)
 	for (int m = 0; m < meshes.size(); m++)
 	{
@@ -560,8 +627,6 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		// {
 		// 	const Triangle &triangle = mesh->triangles[y];
 		// }
-
-		// Culling (Step 5)
 	}
 }
 
