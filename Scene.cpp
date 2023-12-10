@@ -477,9 +477,9 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
 	// Overall steps:
-	// 1. Model Transformation X
-	// 2. Camera Transformation X
-	// 3. Projection Transformation X
+	// 1. Model Transformation X Test
+	// 2. Camera Transformation X Test
+	// 3. Projection Transformation X Test 
 	// 4. Clipping
 	// 5. Backface Culling
 	// 6. Viewport Transformation
