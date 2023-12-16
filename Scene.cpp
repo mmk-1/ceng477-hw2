@@ -643,7 +643,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 8. Depth Buffer [] Test []
 
 	// compute model transformation for each mesh
-	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
+	std::vector<std::map<int, Vec4>> meshes_transformed_vertices = std::vector<std::map<int, Vec4>>(meshes.size());
 	compute_model_transformation_for_meshes(meshes_transformed_vertices);
 
 	// TODO: compute vertices after camera transformation
@@ -651,11 +651,57 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	compute_camera_transformation_for_meshes(meshes_transformed_vertices, camera);
 
 	// TODO: check camera projection type and compute projection transformation
-
 	// Orthographic or perspective
-	compute_projection_for_meshes(camera, meshes_transformed_vertices);
+	compute_projection_transformation_for_meshes(camera, meshes_transformed_vertices);
 
 	// TODO: culling and clipping
+	std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
+	std::map<int, std::map<int, bool>> is_mesh_vertex_viewport_transformed = std::map<int, std::map<int, bool>>();
+	std::map<int, std::map<int, bool>> is_triangle_culled = std::map<int, std::map<int, bool>>();
+	for (int m = 0; m < this->meshes.size(); m++)
+	{
+		Mesh *mesh = this->meshes[m];
+
+		if (mesh->type == WIREFRAME_MESH)
+		{
+			std::vector<Line> lines = std::vector<Line>();
+			for (int t = 0; t < mesh->triangles.size(); t++)
+			{
+				Triangle &triangle = mesh->triangles[t];
+				// Backface culling (Step 5)
+				// if not culled
+				// implement clipping and store lines in a new map
+				Line line1 = Line(
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[1]].x, meshes_transformed_vertices[m][triangle.vertexIds[1]].y, meshes_transformed_vertices[m][triangle.vertexIds[1]].z, triangle.vertexIds[1]),
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[0]].x, meshes_transformed_vertices[m][triangle.vertexIds[0]].y, meshes_transformed_vertices[m][triangle.vertexIds[0]].z, triangle.vertexIds[0]),
+					this->vertices[triangle.vertexIds[1]]->colorId, this->vertices[triangle.vertexIds[0]]->colorId);
+				Line line2 = Line(
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[2]].x, meshes_transformed_vertices[m][triangle.vertexIds[2]].y, meshes_transformed_vertices[m][triangle.vertexIds[2]].z, triangle.vertexIds[2]),
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[1]].x, meshes_transformed_vertices[m][triangle.vertexIds[1]].y, meshes_transformed_vertices[m][triangle.vertexIds[1]].z, triangle.vertexIds[1]),
+					this->vertices[triangle.vertexIds[2]]->colorId, this->vertices[triangle.vertexIds[1]]->colorId);
+				Line line3 = Line(
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[2]].x, meshes_transformed_vertices[m][triangle.vertexIds[2]].y, meshes_transformed_vertices[m][triangle.vertexIds[2]].z, triangle.vertexIds[2]),
+					Vec3(meshes_transformed_vertices[m][triangle.vertexIds[0]].x, meshes_transformed_vertices[m][triangle.vertexIds[0]].y, meshes_transformed_vertices[m][triangle.vertexIds[0]].z, triangle.vertexIds[0]),
+					this->vertices[triangle.vertexIds[2]]->colorId, this->vertices[triangle.vertexIds[0]]->colorId);
+
+				// Clipping the lines, viewport transformation, and store in a new map
+			}
+		}
+		else
+		{
+			continue;
+		}
+	}
+
+	// loop through all meshes
+	// loop through all triangles
+	// check if triangle is backfaced
+	// if not backfaced
+	// if solid
+	// do viewport transformation store in a new map
+	// if wireframe
+	// do clipping (Store lines in a new map)
+	// do viewport transformation store in a new map
 
 	// TODO: compute prespective division if it is perspective projection
 
@@ -758,7 +804,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
  *********************Our Implementation ends here*********************************
  */
 
-void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices)
+void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Vec4>> &meshes_transformed_vertices)
 {
 	for (int m = 0; m < this->meshes.size(); m++)
 	{
@@ -779,16 +825,14 @@ void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Ve
 				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
 				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, vertex->colorId);
-
 				// Store transformed vertex
-				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
+				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex_4;
 			}
 		}
 	}
 }
 
-void Scene::compute_projection_for_meshes(const Camera *camera, std::vector<std::map<int, Vec3>> &meshes_transformed_vertices)
+void Scene::compute_projection_transformation_for_meshes(const Camera *camera, std::vector<std::map<int, Vec4>> &meshes_transformed_vertices)
 {
 	Matrix4 projection_matrix;
 	if (camera->projectionType == ORTOGRAPHIC_PROJECTION)
@@ -802,20 +846,19 @@ void Scene::compute_projection_for_meshes(const Camera *camera, std::vector<std:
 
 	for (int m = 0; m < meshes_transformed_vertices.size(); m++)
 	{
-		std::map<int, Vec3> &mesh_transformed_vertices = meshes_transformed_vertices[m];
-		std::map<int, Vec3>::iterator it;
+		std::map<int, Vec4> &mesh_transformed_vertices = meshes_transformed_vertices[m];
+		std::map<int, Vec4>::iterator it;
 		for (it = mesh_transformed_vertices.begin(); it != mesh_transformed_vertices.end(); it++)
 		{
 
-			Vec4 vertex_4 = Vec4(it->second.x, it->second.y, it->second.z, 1);
+			Vec4 &vertex_4 = it->second;
 			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(projection_matrix, vertex_4);
-			Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, it->second.colorId);
-			it->second = transformed_vertex;
+			it->second = transformed_vertex_4;
 		}
 	}
 }
 
-void Scene::compute_camera_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Camera *camera)
+void Scene::compute_camera_transformation_for_meshes(std::vector<std::map<int, Vec4>> &meshes_transformed_vertices, const Camera *camera)
 {
 	Matrix4 matrix_camera = calculate_camera_trans_matrix(camera);
 	// cout << "Camera Matrix" << endl;
@@ -824,14 +867,14 @@ void Scene::compute_camera_transformation_for_meshes(std::vector<std::map<int, V
 	{
 		for (auto pair_it = mapp_it->begin(); pair_it != mapp_it->end(); ++pair_it)
 		{
-			Vec3 &vertex = pair_it->second;
+			Vec4 &vertex = pair_it->second;
 			// print_matrix4(matrix_camera);
 			// cout << "Vertex " << pair_it->first << " " << vertex.x << " " << vertex.y << " " << vertex.z << endl;
-			Vec4 vertex_4 = Vec4(vertex.x, vertex.y, vertex.z, 1);
-			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_camera, vertex_4);
+			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_camera, vertex);
 			vertex.x = transformed_vertex_4.x;
 			vertex.y = transformed_vertex_4.y;
 			vertex.z = transformed_vertex_4.z;
+			vertex.t = transformed_vertex_4.t;
 			// cout << "Vertex " << pair_it->first << " " << vertex.x << " " << vertex.y << " " << vertex.z << endl;
 		}
 	}
