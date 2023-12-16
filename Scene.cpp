@@ -601,6 +601,9 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 8. Depth Buffer [] Test []
 
 	// TODO: Intialize image and depth vectors
+	std::cout << "Intialize image and depth vectors" << std::endl;
+	std::cout << this->image.size() << std::endl;
+	std::cout << this->image[0].size() << std::endl;
 
 	// TODO: compute model transformation for each mesh
 	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
