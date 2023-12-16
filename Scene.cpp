@@ -459,6 +459,11 @@ Matrix4 calculate_camera_trans_matrix(const Camera *camera)
 	Matrix4 r_matrix(r);
 	Matrix4 t_matrix(t);
 
+	// cout << "Rotation Matrix" << endl;
+	// print_matrix4(r_matrix);
+	// cout << "Translation Matrix" << endl;
+	// print_matrix4(t_matrix);
+
 	return multiplyMatrixWithMatrix(r_matrix, t_matrix);
 }
 
@@ -643,6 +648,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	// TODO: compute vertices after camera transformation
 	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
+	compute_camera_transformation_for_meshes(meshes_transformed_vertices, camera);
 
 	// TODO: check camera projection type and compute projection transformation
 
@@ -758,6 +764,7 @@ void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Ve
 	{
 		const Mesh *mesh = meshes[m];
 		Matrix4 matrix_model = calculate_model_trans_matrix(this, mesh);
+		// print_matrix4(matrix_model);
 		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
 			const Triangle &triangle = mesh->triangles[t]; // Get triangle
@@ -804,6 +811,28 @@ void Scene::compute_projection_for_meshes(const Camera *camera, std::vector<std:
 			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(projection_matrix, vertex_4);
 			Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, it->second.colorId);
 			it->second = transformed_vertex;
+		}
+	}
+}
+
+void Scene::compute_camera_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Camera *camera)
+{
+	Matrix4 matrix_camera = calculate_camera_trans_matrix(camera);
+	// cout << "Camera Matrix" << endl;
+	// print_matrix4(matrix_camera);
+	for (auto mapp_it = meshes_transformed_vertices.begin(); mapp_it != meshes_transformed_vertices.end(); ++mapp_it)
+	{
+		for (auto pair_it = mapp_it->begin(); pair_it != mapp_it->end(); ++pair_it)
+		{
+			Vec3 &vertex = pair_it->second;
+			// print_matrix4(matrix_camera);
+			// cout << "Vertex " << pair_it->first << " " << vertex.x << " " << vertex.y << " " << vertex.z << endl;
+			Vec4 vertex_4 = Vec4(vertex.x, vertex.y, vertex.z, 1);
+			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_camera, vertex_4);
+			vertex.x = transformed_vertex_4.x;
+			vertex.y = transformed_vertex_4.y;
+			vertex.z = transformed_vertex_4.z;
+			// cout << "Vertex " << pair_it->first << " " << vertex.x << " " << vertex.y << " " << vertex.z << endl;
 		}
 	}
 }

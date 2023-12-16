@@ -37,6 +37,7 @@ public:
 	void convertPPMToPNG(std::string ppmFileName);
 	void forwardRenderingPipeline(Camera *camera);
 	void compute_model_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices);
+	void compute_camera_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Camera *camera);
 	void compute_projection_for_meshes(const Camera *camera, std::vector<std::map<int, Vec3>> &meshes_transformed_vertices);
 };
 
