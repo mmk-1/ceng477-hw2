@@ -398,7 +398,7 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 	return multiplyMatrixWithMatrix(m_matrix_inverse, multiplyMatrixWithMatrix(r_matrix, m_matrix));
 };
 
-Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
+Matrix4 calculate_model_trans_matrix(const Mesh *mesh, const Scene *scene)
 {
 	// Initalize result matrix to identity matrix
 	// multiply instead of assignment
@@ -440,7 +440,7 @@ Matrix4 calculate_model_transformation(const Mesh *mesh, const Scene *scene)
 	return result;
 }
 
-Matrix4 calculate_camera_transformation(const Camera *camera)
+Matrix4 calculate_camera_trans_matrix(const Camera *camera)
 {
 	// Translation matrix
 	const Vec3 &position = camera->position;
@@ -459,7 +459,7 @@ Matrix4 calculate_camera_transformation(const Camera *camera)
 	return multiplyMatrixWithMatrix(r_matrix, t_matrix);
 }
 
-Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
+Matrix4 calculate_projection_trans_matrix(const Camera *camera, bool type)
 {
 	Matrix4 result;
 	double left = camera->left;
@@ -498,7 +498,7 @@ Matrix4 calculate_projection_transformation(const Camera *camera, bool type)
 	return result;
 }
 
-Matrix4 calculate_viewport_transformation(Camera *camera)
+Matrix4 calculate_viewport_trans_matrix(Camera *camera)
 {
 	double nx_div_2 = camera->horRes / 2.0;
 	double ny_div_2 = camera->verRes / 2.0;
@@ -610,6 +610,8 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	// TODO: compute vertices after camera transformation
 	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
+	compute_model_transformation(meshes_transformed_vertices, calculate_camera_trans_matrix(camera), calculate_projection_trans_matrix(camera, camera->projectionType));
+
 	std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
 
 	// TODO: check camera projection type and compute projection transformation
@@ -717,6 +719,38 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 /*
  *********************Our Implementation ends here*********************************
  */
+
+void Scene::compute_model_transformation(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Matrix4 &matrix_camera, const Matrix4 &matrix_projection)
+{
+	for (int m = 0; m < this->meshes.size(); m++)
+	{
+		const Mesh *mesh = meshes[m];
+		Matrix4 matrix_model = calculate_model_trans_matrix(mesh, this);
+		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
+		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
+
+		for (int t = 0; t < mesh->triangles.size(); t++)
+		{
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			for (int v = 0; v < 3; v++)
+			{
+
+				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
+					continue;
+
+				// Transform vertex
+				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
+				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
+
+				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
+
+				// Store transformed vertex
+				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
+			}
+		}
+	}
+}
 
 /*
 **********************Test functions starts here*********************************
