@@ -406,8 +406,6 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 
 	Matrix4 result = getIdentityMatrix();
 
-	print_matrix4(result);
-
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
 		// Be careful that transormationIds are 1-indexed
@@ -501,6 +499,40 @@ Matrix4 calculate_projection_trans_matrix(const Camera *camera, bool type)
 	break;
 	}
 	return result;
+}
+
+Matrix4 calculate_orthographic_projection_matrix(const Camera *camera)
+{
+	double left = camera->left;
+	double right = camera->right;
+	double bottom = camera->bottom;
+	double top = camera->top;
+	double near = camera->near;
+	double far = camera->far;
+	double matrix_orth[4][4] = {
+		{2 / (right - left), 0, 0, -((right + left) / (right - left))},
+		{0, 2 / (top - bottom), 0, -((top + bottom) / (top - bottom))},
+		{0, 0, -(2 / (far - near)), -((far + near) / (far - near))},
+		{0, 0, 0, 1}};
+
+	return Matrix4(matrix_orth);
+}
+
+Matrix4 calculate_perspective_projection_matrix(const Camera *camera)
+{
+	double left = camera->left;
+	double right = camera->right;
+	double bottom = camera->bottom;
+	double top = camera->top;
+	double near = camera->near;
+	double far = camera->far;
+	double matrix_perspective[4][4] = {
+		{(2 * near) / (right - left), 0, (right + left) / (right - left), 0},
+		{0, (2 * near) / (top - bottom), (top + bottom) / (top - bottom), 0},
+		{0, 0, -((far + near) / (far - near)), -((2 * far * near) / (far - near))},
+		{0, 0, -1, 0}};
+
+	return Matrix4(matrix_perspective);
 }
 
 Matrix4 calculate_viewport_trans_matrix(Camera *camera)
@@ -614,6 +646,9 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	// TODO: check camera projection type and compute projection transformation
 
+	// Orthographic or perspective
+	compute_projection_for_meshes(camera, meshes_transformed_vertices);
+
 	// TODO: culling and clipping
 
 	// TODO: compute prespective division if it is perspective projection
@@ -626,7 +661,6 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	////////////////////////////////////////////////////
 	// Matrix4 matrix_camera = calculate_camera_transformation(camera);
-	// print_matrix4(matrix_camera);
 	// Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
 	// std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
@@ -724,7 +758,6 @@ void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Ve
 	{
 		const Mesh *mesh = meshes[m];
 		Matrix4 matrix_model = calculate_model_trans_matrix(this, mesh);
-		print_matrix4(matrix_model);
 		for (int t = 0; t < mesh->triangles.size(); t++)
 		{
 			const Triangle &triangle = mesh->triangles[t]; // Get triangle
@@ -744,6 +777,33 @@ void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Ve
 				// Store transformed vertex
 				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
 			}
+		}
+	}
+}
+
+void Scene::compute_projection_for_meshes(const Camera *camera, std::vector<std::map<int, Vec3>> &meshes_transformed_vertices)
+{
+	Matrix4 projection_matrix;
+	if (camera->projectionType == ORTOGRAPHIC_PROJECTION)
+	{
+		projection_matrix = calculate_orthographic_projection_matrix(camera);
+	}
+	else
+	{
+		projection_matrix = calculate_perspective_projection_matrix(camera);
+	}
+
+	for (int m = 0; m < meshes_transformed_vertices.size(); m++)
+	{
+		std::map<int, Vec3> &mesh_transformed_vertices = meshes_transformed_vertices[m];
+		std::map<int, Vec3>::iterator it;
+		for (it = mesh_transformed_vertices.begin(); it != mesh_transformed_vertices.end(); it++)
+		{
+
+			Vec4 vertex_4 = Vec4(it->second.x, it->second.y, it->second.z, 1);
+			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(projection_matrix, vertex_4);
+			Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, it->second.colorId);
+			it->second = transformed_vertex;
 		}
 	}
 }
