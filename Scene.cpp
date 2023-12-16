@@ -401,9 +401,13 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 {
 	// Initalize result matrix to identity matrix
-	// multiply instead of assignment
+	// multiply instead of assignment to avoid copying
+	// TESTED
 
 	Matrix4 result = getIdentityMatrix();
+
+	print_matrix4(result);
+
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
 		// Be careful that transormationIds are 1-indexed
@@ -412,21 +416,22 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		case 'r':
 		{
 			Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
-			result = multiplyMatrixWithMatrix(result, calculate_rotation_transformation(rotation));
+			Matrix4 rotation_matrix = calculate_rotation_transformation(rotation);
+			result = multiplyMatrixWithMatrix(rotation_matrix, result);
 		}
 		break;
 		case 't':
 		{
 			Translation *translation = scene->translations[mesh->transformationIds[i] - 1];
 			double translation_matrix[4][4] = {{1, 0, 0, translation->tx}, {0, 1, 0, translation->ty}, {0, 0, 1, translation->tz}, {0, 0, 0, 1}};
-			result = multiplyMatrixWithMatrix(result, translation_matrix);
+			result = multiplyMatrixWithMatrix(translation_matrix, result);
 		}
 		break;
 		case 's':
 		{
 			Scaling *scale = scene->scalings[mesh->transformationIds[i] - 1];
 			double scale_matrix[4][4] = {{scale->sx, 0, 0, 0}, {0, scale->sy, 0, 0}, {0, 0, scale->sz, 0}, {0, 0, 0, 1}};
-			result = multiplyMatrixWithMatrix(result, scale_matrix);
+			result = multiplyMatrixWithMatrix(scale_matrix, result);
 		}
 		break;
 		default:
@@ -591,8 +596,8 @@ Line clip_line(Line &line, bool &visible, double x_min, double x_max, double y_m
 void Scene::forwardRenderingPipeline(Camera *camera)
 {
 	// Overall steps:
-	// 1. Model Transformation [X] Test []
-	// 2. Camera Transformation [X] Test [X]
+	// 1. Model Transformation [X] Test [X]
+	// 2. Camera Transformation [X] Test []
 	// 3. Projection Transformation [X] Test []
 	// 4. Clipping [] Test []
 	// 5. Backface Culling [X] Test []
@@ -600,7 +605,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
 
-	// TODO: compute model transformation for each mesh
+	// compute model transformation for each mesh
 	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
 	compute_model_transformation_for_meshes(meshes_transformed_vertices);
 
@@ -721,29 +726,27 @@ void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Ve
 	{
 		const Mesh *mesh = meshes[m];
 		Matrix4 matrix_model = calculate_model_trans_matrix(this, mesh);
-
 		print_matrix4(matrix_model);
+		for (int t = 0; t < mesh->triangles.size(); t++)
+		{
+			const Triangle &triangle = mesh->triangles[t]; // Get triangle
+			for (int v = 0; v < 3; v++)
+			{
 
-		// for (int t = 0; t < mesh->triangles.size(); t++)
-		// {
-		// 	const Triangle &triangle = mesh->triangles[t]; // Get triangle
-		// 	for (int v = 0; v < 3; v++)
-		// 	{
+				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
+					continue;
 
-		// 		if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
-		// 			continue;
+				// Transform vertex
+				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
+				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-		// 		// Transform vertex
-		// 		Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
-		// 		Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
-		// 		Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
+				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, vertex->colorId);
 
-		// 		Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
-
-		// 		// Store transformed vertex
-		// 		meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
-		// 	}
-		// }
+				// Store transformed vertex
+				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
+			}
+		}
 	}
 }
 
@@ -762,4 +765,5 @@ void print_matrix4(Matrix4 matrix)
 		}
 		cout << "]" << endl;
 	}
+	std::cout << "---------------------" << std::endl;
 }
