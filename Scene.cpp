@@ -612,8 +612,6 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// TODO: compute vertices after camera transformation
 	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
 
-	std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
-
 	// TODO: check camera projection type and compute projection transformation
 
 	// TODO: culling and clipping
