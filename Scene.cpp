@@ -603,6 +603,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// TODO: Intialize image and depth vectors
 
 	// TODO: compute model transformation for each mesh
+	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
 
 	// TODO: compute vertices after camera transformation
 	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
@@ -620,93 +621,94 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	// display the image
 
-	Matrix4 matrix_camera = calculate_camera_transformation(camera);
+	////////////////////////////////////////////////////
+	// Matrix4 matrix_camera = calculate_camera_transformation(camera);
 	// print_matrix4(matrix_camera);
-	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
+	// Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
 
-	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
+	// std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
 
 	// Go through all meshes and apply transformations
-	for (int m = 0; m < meshes.size(); m++)
-	{
-		const Mesh *mesh = meshes[m];
-		Matrix4 matrix_model = calculate_model_transformation(mesh, this);
-		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
-		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
+	// for (int m = 0; m < meshes.size(); m++)
+	// {
+	// 	const Mesh *mesh = meshes[m];
+	// 	Matrix4 matrix_model = calculate_model_transformation(mesh, this);
+	// 	matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
+	// 	matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
 
-		for (int t = 0; t < mesh->triangles.size(); t++)
-		{
-			const Triangle &triangle = mesh->triangles[t]; // Get triangle
-			for (int v = 0; v < 3; v++)
-			{
+	// 	for (int t = 0; t < mesh->triangles.size(); t++)
+	// 	{
+	// 		const Triangle &triangle = mesh->triangles[t]; // Get triangle
+	// 		for (int v = 0; v < 3; v++)
+	// 		{
 
-				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
-					continue;
+	// 			if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
+	// 				continue;
 
-				// Transform vertex
-				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
-				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
-				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
+	// 			// Transform vertex
+	// 			Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
+	// 			Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+	// 			Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
+	// 			Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
 
-				// Store transformed vertex
-				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
-			}
-		}
-	}
+	// 			// Store transformed vertex
+	// 			meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
+	// 		}
+	// 	}
+	// }
 
-	for (int m = 0; m < meshes.size(); m++)
-	{
-		const Mesh *mesh = meshes[m];
-		for (int t = 0; t < mesh->triangles.size(); t++)
-		{
-			const Triangle &triangle = mesh->triangles[t]; // Get triangle
-			// Backface culling (Step 5)
-			const Vec3 &v0 = meshes_transformed_vertices[m][triangle.vertexIds[0]];
-			const Vec3 &v1 = meshes_transformed_vertices[m][triangle.vertexIds[1]];
-			const Vec3 &v2 = meshes_transformed_vertices[m][triangle.vertexIds[2]];
-			if (this->cullingEnabled && !is_backfaced(v0, v1, v2))
-			{
-				// Do these steps only if culling is enabled and triangle is in front
-				if (mesh->type == SOLID_MESH)
-				{
-					// Solid
+	// for (int m = 0; m < meshes.size(); m++)
+	// {
+	// 	const Mesh *mesh = meshes[m];
+	// 	for (int t = 0; t < mesh->triangles.size(); t++)
+	// 	{
+	// 		const Triangle &triangle = mesh->triangles[t]; // Get triangle
+	// 		// Backface culling (Step 5)
+	// 		const Vec3 &v0 = meshes_transformed_vertices[m][triangle.vertexIds[0]];
+	// 		const Vec3 &v1 = meshes_transformed_vertices[m][triangle.vertexIds[1]];
+	// 		const Vec3 &v2 = meshes_transformed_vertices[m][triangle.vertexIds[2]];
+	// 		if (this->cullingEnabled && !is_backfaced(v0, v1, v2))
+	// 		{
+	// 			// Do these steps only if culling is enabled and triangle is in front
+	// 			if (mesh->type == SOLID_MESH)
+	// 			{
+	// 				// Solid
 
-					// Viewport Transformation (Step 6)
-					Matrix4 matrix_viewport = calculate_viewport_transformation(camera);
-					Vec4 v0_4 = Vec4(v0.x, v0.y, v0.z, 1, v0.colorId);
-					Vec4 v1_4 = Vec4(v1.x, v1.y, v1.z, 1, v1.colorId);
-					Vec4 v2_4 = Vec4(v2.x, v2.y, v2.z, 1, v2.colorId);
-					Vec4 viewportV0 = multiplyMatrixWithVec4(matrix_viewport, v0_4);
-					Vec4 viewportV1 = multiplyMatrixWithVec4(matrix_viewport, v1_4);
-					Vec4 viewportV2 = multiplyMatrixWithVec4(matrix_viewport, v2_4);
-					// Rasterization (Step 7)
+	// 				// Viewport Transformation (Step 6)
+	// 				Matrix4 matrix_viewport = calculate_viewport_transformation(camera);
+	// 				Vec4 v0_4 = Vec4(v0.x, v0.y, v0.z, 1, v0.colorId);
+	// 				Vec4 v1_4 = Vec4(v1.x, v1.y, v1.z, 1, v1.colorId);
+	// 				Vec4 v2_4 = Vec4(v2.x, v2.y, v2.z, 1, v2.colorId);
+	// 				Vec4 viewportV0 = multiplyMatrixWithVec4(matrix_viewport, v0_4);
+	// 				Vec4 viewportV1 = multiplyMatrixWithVec4(matrix_viewport, v1_4);
+	// 				Vec4 viewportV2 = multiplyMatrixWithVec4(matrix_viewport, v2_4);
+	// 				// Rasterization (Step 7)
 
-					// Depth Buffer (Step 8)
-				}
-				else
-				{
-					// Wireframe
+	// 				// Depth Buffer (Step 8)
+	// 			}
+	// 			else
+	// 			{
+	// 				// Wireframe
 
-					// Culling (Step 5)
-					std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
-					// Clipping (Step 4)
-					for (int m = 0; m < meshes.size(); m++)
-					{
-						const Mesh *mesh = meshes[m];
-						if (mesh->type == WIREFRAME_MESH)
-							continue;
+	// 				// Culling (Step 5)
+	// 				std::map<int, std::vector<Line>> meshes_lines = std::map<int, std::vector<Line>>();
+	// 				// Clipping (Step 4)
+	// 				for (int m = 0; m < meshes.size(); m++)
+	// 				{
+	// 					const Mesh *mesh = meshes[m];
+	// 					if (mesh->type == WIREFRAME_MESH)
+	// 						continue;
 
-						// for (int y = 0; y < mesh->triangles.size(); y++)
-						// {
-						// 	const Triangle &triangle = mesh->triangles[y];
-						// }
-					}
-				}
-			}
-		}
-	}
+	// 					// for (int y = 0; y < mesh->triangles.size(); y++)
+	// 					// {
+	// 					// 	const Triangle &triangle = mesh->triangles[y];
+	// 					// }
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 /*
