@@ -600,6 +600,26 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
 
+	// TODO: Intialize image and depth vectors
+
+	// TODO: compute model transformation for each mesh
+
+	// TODO: compute vertices after camera transformation
+	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
+	std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
+
+	// TODO: check camera projection type and compute projection transformation
+
+	// TODO: culling and clipping
+
+	// TODO: compute prespective division if it is perspective projection
+
+	// TODO: view port transformation
+
+	// TODO: rasterization line or triangle (deoth buffer is here)
+
+	// display the image
+
 	Matrix4 matrix_camera = calculate_camera_transformation(camera);
 	// print_matrix4(matrix_camera);
 	Matrix4 matrix_projection = calculate_projection_transformation(camera, camera->projectionType);
