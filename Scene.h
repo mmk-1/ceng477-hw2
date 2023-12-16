@@ -9,6 +9,8 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "Matrix4.h"
+#include <map>
+#include <vector>
 
 class Scene
 {
@@ -34,7 +36,7 @@ public:
 	void writeImageToPPMFile(Camera *camera);
 	void convertPPMToPNG(std::string ppmFileName);
 	void forwardRenderingPipeline(Camera *camera);
-	void compute_model_transformation(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Matrix4 &matrix_camera, const Matrix4 &matrix_projection);
+	void compute_model_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices);
 };
 
 struct Line
@@ -55,7 +57,7 @@ struct Line
 };
 
 Matrix4 calculate_rotation_transformation(const Rotation *rotation);
-Matrix4 calculate_model_trans_matrix(const Mesh *mesh, const Scene *scene);
+Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh);
 Matrix4 calculate_camera_trans_matrix(const Camera *camera);
 Matrix4 calculate_projection_trans_matrix(const Camera *camera, bool type);
 Matrix4 calculate_viewport_trans_matrix(Camera *camera);

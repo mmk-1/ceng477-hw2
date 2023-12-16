@@ -398,7 +398,7 @@ Matrix4 calculate_rotation_transformation(const Rotation *rotation)
 	return multiplyMatrixWithMatrix(m_matrix_inverse, multiplyMatrixWithMatrix(r_matrix, m_matrix));
 };
 
-Matrix4 calculate_model_trans_matrix(const Mesh *mesh, const Scene *scene)
+Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 {
 	// Initalize result matrix to identity matrix
 	// multiply instead of assignment
@@ -600,17 +600,12 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 7. Rasterization [] Test []
 	// 8. Depth Buffer [] Test []
 
-	// TODO: Intialize image and depth vectors
-	std::cout << "Intialize image and depth vectors" << std::endl;
-	std::cout << this->image.size() << std::endl;
-	std::cout << this->image[0].size() << std::endl;
-
 	// TODO: compute model transformation for each mesh
 	std::vector<std::map<int, Vec3>> meshes_transformed_vertices = std::vector<std::map<int, Vec3>>(meshes.size());
+	compute_model_transformation_for_meshes(meshes_transformed_vertices);
 
 	// TODO: compute vertices after camera transformation
 	// Compute camera transformation (camera*, transfromed_vertices*, meshes*)
-	compute_model_transformation(meshes_transformed_vertices, calculate_camera_trans_matrix(camera), calculate_projection_trans_matrix(camera, camera->projectionType));
 
 	std::vector<Vec3> transformed_vertices = std::vector<Vec3>(this->vertices.size());
 
@@ -720,35 +715,35 @@ void Scene::forwardRenderingPipeline(Camera *camera)
  *********************Our Implementation ends here*********************************
  */
 
-void Scene::compute_model_transformation(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices, const Matrix4 &matrix_camera, const Matrix4 &matrix_projection)
+void Scene::compute_model_transformation_for_meshes(std::vector<std::map<int, Vec3>> &meshes_transformed_vertices)
 {
 	for (int m = 0; m < this->meshes.size(); m++)
 	{
 		const Mesh *mesh = meshes[m];
-		Matrix4 matrix_model = calculate_model_trans_matrix(mesh, this);
-		matrix_model = multiplyMatrixWithMatrix(matrix_camera, matrix_model);
-		matrix_model = multiplyMatrixWithMatrix(matrix_projection, matrix_model);
+		Matrix4 matrix_model = calculate_model_trans_matrix(this, mesh);
 
-		for (int t = 0; t < mesh->triangles.size(); t++)
-		{
-			const Triangle &triangle = mesh->triangles[t]; // Get triangle
-			for (int v = 0; v < 3; v++)
-			{
+		print_matrix4(matrix_model);
 
-				if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
-					continue;
+		// for (int t = 0; t < mesh->triangles.size(); t++)
+		// {
+		// 	const Triangle &triangle = mesh->triangles[t]; // Get triangle
+		// 	for (int v = 0; v < 3; v++)
+		// 	{
 
-				// Transform vertex
-				Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
-				Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
-				Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
+		// 		if (meshes_transformed_vertices[m].find(triangle.vertexIds[v]) != meshes_transformed_vertices[m].end())
+		// 			continue;
 
-				Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
+		// 		// Transform vertex
+		// 		Vec3 *vertex = this->vertices[triangle.vertexIds[v] - 1];
+		// 		Vec4 vertex_4 = Vec4(vertex->x, vertex->y, vertex->z, 1);
+		// 		Vec4 transformed_vertex_4 = multiplyMatrixWithVec4(matrix_model, vertex_4);
 
-				// Store transformed vertex
-				meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
-			}
-		}
+		// 		Vec3 transformed_vertex = Vec3(transformed_vertex_4.x, transformed_vertex_4.y, transformed_vertex_4.z, transformed_vertex_4.colorId);
+
+		// 		// Store transformed vertex
+		// 		meshes_transformed_vertices[m][triangle.vertexIds[v]] = transformed_vertex;
+		// 	}
+		// }
 	}
 }
 
