@@ -676,7 +676,7 @@ Vec4 perspective_division(Vec4 &v)
 
 void draw(Scene *scene, int x, int y, Color &color, double depth)
 {
-	if (depth <= scene->depth[x][y])
+	if (depth < scene->depth[x][y])
 	{
 		scene->depth[x][y] = depth;
 		scene->image[x][y].r = int(round(color.r));
