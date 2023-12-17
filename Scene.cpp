@@ -1106,19 +1106,6 @@ void print_matrix4(Matrix4 matrix)
 	}
 	std::cout << "---------------------" << std::endl;
 }
-void print_matrix4(Matrix4 matrix)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		cout << "[";
-		for (int j = 0; j < 4; j++)
-		{
-			cout << matrix.values[i][j] << " ";
-		}
-		cout << "]" << endl;
-	}
-	std::cout << "---------------------" << std::endl;
-}
 
 void print_vec4(Vec4 vec)
 {
