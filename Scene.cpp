@@ -647,56 +647,8 @@ std::vector<Vec4> clip_line(Scene *scene, std::vector<Vec4> &line, std::vector<C
 		}
 	}
 
-	// double dx = line.x1 - line.x0;
-	// double dy = line.y1 - line.y0;
-	// double dz = line.z1 - line.z0;
-	// visible = false;
-	// if (is_visible(dx, x_min - line.x0, te, tl) &&
-	// 	is_visible(-dx, line.x0 - x_max, te, tl) &&
-	// 	is_visible(dy, y_min - line.y0, te, tl) &&
-	// 	is_visible(-dy, line.y0 - y_max, te, tl) &&
-	// 	is_visible(dz, z_min - line.z0, te, tl) &&
-	// 	is_visible(-dz, line.z0 - z_max, te, tl))
-	// {
-	// 	visible = true;
-	// 	if (tl < 1)
-	// 	{
-	// 		line.x1 = line.x0 + tl * dx;
-	// 		line.y1 = line.y0 + tl * dy;
-	// 		line.z1 = line.z0 + tl * dz;
-	// 		line.c1.r = line.c0.r + tl * (line.c1.r - line.c0.r);
-	// 		line.c1.g = line.c0.g + tl * (line.c1.g - line.c0.g);
-	// 		line.c1.b = line.c0.b + tl * (line.c1.b - line.c0.b);
-	// 	}
-	// 	if (te > 0)
-	// 	{
-	// 		line.x0 = line.x0 + te * dx;
-	// 		line.y0 = line.y0 + te * dy;
-	// 		line.z0 = line.z0 + te * dz;
-	// 		line.c0.r = line.c0.r + te * (line.c1.r - line.c0.r);
-	// 		line.c0.g = line.c0.g + te * (line.c1.g - line.c0.g);
-	// 		line.c0.b = line.c0.b + te * (line.c1.b - line.c0.b);
-	// 	}
-	// }
 	return line;
 }
-
-// /*
-// This function takes a matrix and vertix as input.
-// It returns the vertix after transformation.
-// The new values are stored in the vertices.
-// */
-// void transform_vertices(Matrix4 &transformation_matrix, Vec4 &v)
-// {
-// 	double x = v.x;
-// 	double y = v.y;
-// 	double z = v.z;
-// 	double t = v.t;
-// 	v.x = transformation_matrix.matrix[0][0] * x + transformation_matrix.matrix[0][1] * y + transformation_matrix.matrix[0][2] * z + transformation_matrix.matrix[0][3] * t;
-// 	v.y = transformation_matrix.matrix[1][0] * x + transformation_matrix.matrix[1][1] * y + transformation_matrix.matrix[1][2] * z + transformation_matrix.matrix[1][3] * t;
-// 	v.z = transformation_matrix.matrix[2][0] * x + transformation_matrix.matrix[2][1] * y + transformation_matrix.matrix[2][2] * z + transformation_matrix.matrix[2][3] * t;
-// 	v.t = transformation_matrix.matrix[3][0] * x + transformation_matrix.matrix[3][1] * y + transformation_matrix.matrix[3][2] * z + transformation_matrix.matrix[3][3] * t;
-// }
 
 /*
 This fuction takes Vec4 as input and returns Vec4 after perspective division.
@@ -708,6 +660,183 @@ Vec4 perspective_division(Vec4 &v)
 	v.z = v.z / v.t;
 	v.t = 1;
 	return v;
+}
+
+void draw(Scene *scene, int x, int y, Color &color, double depth)
+{
+	scene->image[x][y].r = int(round(color.r));
+	scene->image[x][y].g = int(round(color.g));
+	scene->image[x][y].b = int(round(color.b));
+}
+
+/*
+This function takes 2 points representing a line and rasterizes it.
+*/
+void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
+{
+	// Midpoint rasterization algorithm
+	if (v0.x > v1.x)
+	{
+		Vec3 temp = v0;
+		v0 = v1;
+		v1 = temp;
+		Color temp_color = c0;
+		c0 = c1;
+		c1 = temp_color;
+	}
+	double dx = (v1.x - v0.x);
+	double dy = (v1.y - v0.y);
+	double slope = dy / dx;
+
+	int x0 = int(v0.x);
+	int y0 = int(v0.y);
+	int x1 = int(v1.x);
+	int y1 = int(v1.y);
+	Color c = c0;
+
+	if (slope >= 0)
+	{
+		if (slope > 1)
+		{
+			std::cout << "Rasterizing line slope > 1" << std::endl;
+			printVec3(v0);
+			printVec3(v1);
+			std::cout << "x0 " << x0 << std::endl;
+			std::cout << "y0 " << y0 << std::endl;
+			std::cout << "x1 " << x1 << std::endl;
+			std::cout << "y1 " << y1 << std::endl;
+
+			int x = x0;
+			double dr = (c1.r - c0.r) / dy;
+			double dg = (c1.g - c0.g) / dy;
+			double db = (c1.b - c0.b) / dy;
+			double d = (v0.x - v1.x) + .5 * (v1.y - v0.y);
+			for (int y = y0; y <= y1; y++)
+			{
+				draw(scene, x, y, c, .5);
+				if (d < 0)
+				{
+					x = x + 1;
+					d += (x0 - x1) + (y1 - y0);
+				}
+				else
+				{
+					d += (x0 - x1);
+				}
+				c.r += dr;
+				c.g += dg;
+				c.b += db;
+			}
+		}
+		else
+		{
+			int y = y0;
+			double dr = (c1.r - c0.r) / dx;
+			double dg = (c1.g - c0.g) / dx;
+			double db = (c1.b - c0.b) / dx;
+			double d = (v0.y - v1.y) + .5 * (v1.x - v0.x);
+			for (int x = x0; x <= x1; x++)
+			{
+				draw(scene, x, y, c, .5);
+				if (d < 0)
+				{
+					y = y + 1;
+					d += (y0 - y1) + (x1 - x0);
+				}
+				else
+				{
+					d += (y0 - y1);
+				}
+				c.r += dr;
+				c.g += dg;
+				c.b += db;
+			}
+		}
+	}
+	else
+	{
+		if (slope > -1)
+		{
+			int y = y0;
+			double dr = (c1.r - c0.r) / dx;
+			double dg = (c1.g - c0.g) / dx;
+			double db = (c1.b - c0.b) / dx;
+			double d = (v0.y - v1.y) - .5 * (v1.x - v0.x);
+			for (int x = x0; x <= x1; x++)
+			{
+				draw(scene, x, y, c, .5);
+				if (d > 0)
+				{
+					y = y - 1;
+					d += (y0 - y1) - (x1 - x0);
+				}
+				else
+				{
+					d += (y0 - y1);
+				}
+				c.r += dr;
+				c.g += dg;
+				c.b += db;
+			}
+		}
+		else
+		{
+			std::cout << "Rasterizing line slope < - 1" << std::endl;
+			printVec3(v0);
+			printVec3(v1);
+			std::cout << "x0 " << x0 << std::endl;
+			std::cout << "y0 " << y0 << std::endl;
+			std::cout << "x1 " << x1 << std::endl;
+			std::cout << "y1 " << y1 << std::endl;
+			int x = x0;
+			double dr = (c1.r - c0.r) / dy;
+			double dg = (c1.g - c0.g) / dy;
+			double db = (c1.b - c0.b) / dy;
+			double d = 2 * (v0.x - v1.x) + (v1.y - v0.y);
+			for (int y = y0; y >= y1; y--)
+			{
+				draw(scene, x, y, c, .5);
+				if (d < 0)
+				{
+					x = x + 1;
+					d += 2 * ((x0 - x1) + (y0 - y1));
+				}
+				else
+				{
+					d += 2 * (x0 - x1);
+				}
+				c.r += dr;
+				c.g += dg;
+				c.b += db;
+			}
+		}
+	}
+}
+
+void clip_and_rasterize_line(Scene *scene, Vec4 v0, Vec4 v1, Matrix4 &viewport_transformation_matrix)
+{
+	std::vector<Vec4> line = std::vector<Vec4>(2);
+	std::vector<Color> line_colors = std::vector<Color>(2);
+	bool is_line_visible = false;
+	line[0] = v0;
+	line[1] = v1;
+	line_colors[0] = *(scene->colorsOfVertices[v0.colorId - 1]);
+	line_colors[1] = *(scene->colorsOfVertices[v1.colorId - 1]);
+
+	clip_line(scene, line, line_colors, is_line_visible);
+	if (is_line_visible)
+	{
+
+		// 7. Viewport Transformation for a line
+		line[0] = multiplyMatrixWithVec4(viewport_transformation_matrix, line[0]);
+		line[1] = multiplyMatrixWithVec4(viewport_transformation_matrix, line[1]);
+
+		Vec3 v0_viewport = Vec3(line[0].x, line[0].y, line[0].z);
+		Vec3 v1_viewport = Vec3(line[1].x, line[1].y, line[1].z);
+
+		// 8. Rasterization for a line
+		rasterize_line(scene, v0_viewport, v1_viewport, line_colors[0], line_colors[1]);
+	}
 }
 
 void Scene::forwardRenderingPipeline(Camera *camera)
@@ -764,27 +893,13 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 			// 5. Backface Culling
 			// TODO: Check if backfaced
+			if (is_backfaced(Vec3(v0.x, v0.y, v0.z), Vec3(v1.x, v1.y, v1.z), Vec3(v2.x, v2.y, v2.z)))
+				continue;
 
-			// 6. Clipping for a line
-			std::vector<Vec4> l0 = std::vector<Vec4>(2);
-			std::vector<Color> l0_colors = std::vector<Color>(2);
-			bool is_l0_visible = false;
-			l0[0] = v0;
-			l0[1] = v1;
-			l0_colors[0] = *this->colorsOfVertices[v0.colorId - 1];
-			l0_colors[1] = *this->colorsOfVertices[v1.colorId - 1];
-			clip_line(this, l0, l0_colors, is_l0_visible);
-
-			// 7. Viewport Transformation for a line
-			l0[0] = multiplyMatrixWithVec4(viewport_transformation_matrix, l0[0]);
-			l0[1] = multiplyMatrixWithVec4(viewport_transformation_matrix, l0[1]);
-
-			Vec3 v0_viewport = Vec3(l0[0].x, l0[0].y, l0[0].z, l0[0].colorId);
-			Vec3 v1_viewport = Vec3(l0[1].x, l0[1].y, l0[1].z, l0[1].colorId);
-			printVec3(v0_viewport);
-			printVec3(v1_viewport);
-
-			// 8. Rasterization for a line
+			// 6. Clipping and rasterization for a linv0e
+			clip_and_rasterize_line(this, v0, v1, viewport_transformation_matrix);
+			clip_and_rasterize_line(this, v1, v2, viewport_transformation_matrix);
+			clip_and_rasterize_line(this, v2, v0, viewport_transformation_matrix);
 		}
 	}
 }

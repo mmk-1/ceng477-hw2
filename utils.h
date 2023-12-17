@@ -18,6 +18,7 @@ Matrix4 calculate_camera_trans_matrix(const Camera *camera);
 Matrix4 calculate_projection_trans_matrix(const Camera *camera);
 std::vector<Vec4> clip_line(Scene *scene, std::vector<Vec4> &line, std::vector<Color> &line_colors, bool &visible);
 bool is_visible(double den, double num, double &te, double &tl);
+void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1);
 
 void print_vec4(Vec4 vec);
 void print_matrix4(Matrix4 matrix);
