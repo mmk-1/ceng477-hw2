@@ -685,14 +685,14 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 		c0 = c1;
 		c1 = temp_color;
 	}
-	double dx = (v1.x - v0.x);
-	double dy = (v1.y - v0.y);
-	double slope = dy / dx;
-
 	int x0 = int(v0.x);
 	int y0 = int(v0.y);
 	int x1 = int(v1.x);
 	int y1 = int(v1.y);
+	double dx = (x1 - x0);
+	double dy = (y1 - y0);
+	double slope = dy / dx;
+
 	Color c = c0;
 
 	if (slope >= 0)
@@ -791,9 +791,9 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 				{
 					d += 2 * (x0 - x1);
 				}
-				c.r += dr;
-				c.g += dg;
-				c.b += db;
+				c.r -= dr;
+				c.g -= dg;
+				c.b -= db;
 			}
 		}
 	}
@@ -858,22 +858,26 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 		Mesh *mesh = this->meshes[m];
 		Matrix4 mesh_model_transformation_matrix = calculate_model_trans_matrix(this, mesh);
 
-		std::cout << "Model Transformation matrix " << std::endl;
-		print_matrix4(mesh_model_transformation_matrix);
+		// std::cout << "Model Transformation matrix " << std::endl;
+		// print_matrix4(mesh_model_transformation_matrix);
 
-		std::cout << "Camera Transformation matrix " << std::endl;
-		print_matrix4(camera_transformation_matrix);
+		// std::cout << "Camera Transformation matrix " << std::endl;
+		// print_matrix4(camera_transformation_matrix);
 
-		std::cout << "Projection Transformation matrix " << std::endl;
-		print_matrix4(projection_transformation_matrix);
+		// std::cout << "Projection Transformation matrix " << std::endl;
+		// print_matrix4(projection_transformation_matrix);
 
 		for (int t = 0; t < mesh->numberOfTriangles; t++)
 		{
 			Triangle &triangle = mesh->triangles[t];
 
-			Vec4 v0 = Vec4(this->vertices[triangle.vertexIds[0] - 1]->x, this->vertices[triangle.vertexIds[0] - 1]->y, this->vertices[triangle.vertexIds[0] - 1]->z, 1, this->vertices[triangle.vertexIds[0] - 1]->colorId);
-			Vec4 v1 = Vec4(this->vertices[triangle.vertexIds[1] - 1]->x, this->vertices[triangle.vertexIds[1] - 1]->y, this->vertices[triangle.vertexIds[1] - 1]->z, 1, this->vertices[triangle.vertexIds[1] - 1]->colorId);
-			Vec4 v2 = Vec4(this->vertices[triangle.vertexIds[2] - 1]->x, this->vertices[triangle.vertexIds[2] - 1]->y, this->vertices[triangle.vertexIds[2] - 1]->z, 1, this->vertices[triangle.vertexIds[2] - 1]->colorId);
+			Vec3 *vertix0 = this->vertices[triangle.vertexIds[0] - 1];
+			Vec3 *vertix1 = this->vertices[triangle.vertexIds[1] - 1];
+			Vec3 *vertix2 = this->vertices[triangle.vertexIds[2] - 1];
+
+			Vec4 v0 = Vec4(vertix0->x, vertix0->y, vertix0->z, 1, vertix0->colorId);
+			Vec4 v1 = Vec4(vertix1->x, vertix1->y, vertix1->z, 1, vertix1->colorId);
+			Vec4 v2 = Vec4(vertix2->x, vertix2->y, vertix2->z, 1, vertix2->colorId);
 
 			// 1. Model Transformation
 			v0 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v0);
