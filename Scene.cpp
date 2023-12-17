@@ -414,6 +414,10 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
+		cout << "tranformation type: " << mesh->transformationTypes[i] << endl;
+		cout << "transformatin id: " << mesh->transformationIds[i] << endl;
+		cout << "result matrix before transformation" << endl;
+		print_matrix4(result);
 		// Be careful that transormationIds are 1-indexed
 		switch (mesh->transformationTypes[i])
 		{
@@ -421,6 +425,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
 			Matrix4 rotation_matrix = calculate_rotation_transformation(rotation);
+			cout << "rotation matrix" << endl;
+			print_matrix4(rotation_matrix);
 			result = multiplyMatrixWithMatrix(rotation_matrix, result);
 		}
 		break;
@@ -428,6 +434,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Translation *translation = scene->translations[mesh->transformationIds[i] - 1];
 			double translation_matrix[4][4] = {{1, 0, 0, translation->tx}, {0, 1, 0, translation->ty}, {0, 0, 1, translation->tz}, {0, 0, 0, 1}};
+			cout << "translation matrix" << endl;
+			print_matrix4(translation_matrix);
 			result = multiplyMatrixWithMatrix(translation_matrix, result);
 		}
 		break;
@@ -435,6 +443,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Scaling *scale = scene->scalings[mesh->transformationIds[i] - 1];
 			double scale_matrix[4][4] = {{scale->sx, 0, 0, 0}, {0, scale->sy, 0, 0}, {0, 0, scale->sz, 0}, {0, 0, 0, 1}};
+			cout << "scale matrix" << endl;
+			print_matrix4(scale_matrix);
 			result = multiplyMatrixWithMatrix(scale_matrix, result);
 		}
 		break;
@@ -445,6 +455,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		}
 		break;
 		}
+		cout << "result matrix after transformation" << endl;
+		print_matrix4(result);
 	}
 	return result;
 }
@@ -560,7 +572,7 @@ Matrix4 calculate_viewport_trans_matrix(Camera *camera)
 	double M_viewport[4][4] = {{nx_div_2, 0, 0, nx_div_2_minus_1},
 							   {0, ny_div_2, 0, ny_div_2_minus_1},
 							   {0, 0, 0.5, 0.5},
-							   {0, 0, 0, 0}};
+							   {0, 0, 0, 1}};
 	return Matrix4(M_viewport);
 }
 
@@ -839,13 +851,38 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// 9. Depth Testing [] Test []
 
 	Matrix4 camera_transformation_matrix = calculate_camera_trans_matrix(camera);
+	// cout << "Camera Transformation matrix " << endl;
+	print_matrix4(camera_transformation_matrix);
+	// cout << "Camera orientation" << endl;
+	// print_vec4(Vec4(camera->u.x, camera->u.y, camera->u.z, 1, 0));
+	// print_vec4(Vec4(camera->v.x, camera->v.y, camera->v.z, 1, 0));
+	// print_vec4(Vec4(camera->w.x, camera->w.y, camera->w.z, 1, 0));
+	// print_vec4(Vec4(camera->position.x, camera->position.y, camera->position.z, 1, 0));
+
 	Matrix4 projection_transformation_matrix = calculate_projection_trans_matrix(camera);
+	// cout << "Camera stuff" << endl;
+	// cout << "Camera left " << camera->left << endl;
+	// cout << "Camera right " << camera->right << endl;
+	// cout << "Camera bottom " << camera->bottom << endl;
+	// cout << "Camera top " << camera->top << endl;
+	// cout << "Camera near " << camera->near << endl;
+	// cout << "Camera far " << camera->far << endl;
+	// cout << "Projection Transformation matrix " << endl;
+	print_matrix4(projection_transformation_matrix);
+
 	Matrix4 viewport_transformation_matrix = calculate_viewport_trans_matrix(camera);
+	// cout << "camera horizontal " << camera->horRes << endl;
+	// cout << "camera vertical " << camera->verRes << endl;
+	// cout << "Viewport Transformation matrix " << endl;
+	print_matrix4(viewport_transformation_matrix);
 
 	for (int m = 0; m < this->meshes.size(); m++)
 	{
 		Mesh *mesh = this->meshes[m];
+
 		Matrix4 mesh_model_transformation_matrix = calculate_model_trans_matrix(this, mesh);
+		cout << "Model Transformation matrix " << endl;
+		print_matrix4(mesh_model_transformation_matrix);
 
 		// std::cout << "Model Transformation matrix " << std::endl;
 		// print_matrix4(mesh_model_transformation_matrix);
@@ -868,20 +905,48 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			Vec4 v1 = Vec4(vertix1->x, vertix1->y, vertix1->z, 1, vertix1->colorId);
 			Vec4 v2 = Vec4(vertix2->x, vertix2->y, vertix2->z, 1, vertix2->colorId);
 
+			cout << "v0" << endl;
+			print_vec4(v0);
+			cout << "v1" << endl;
+			print_vec4(v1);
+			cout << "v2" << endl;
+			print_vec4(v2);
+
 			// 1. Model Transformation
 			v0 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v2);
+
+			cout << "v0 after multiply with model trans matrix" << endl;
+			print_vec4(v0);
+			cout << "v1 after multiply with model trans matrix" << endl;
+			print_vec4(v1);
+			cout << "v2 after multiply with model trans matrix" << endl;
+			print_vec4(v2);
 
 			// 2. Camera Transformation
 			v0 = multiplyMatrixWithVec4(camera_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(camera_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(camera_transformation_matrix, v2);
 
+			cout << "v0 after camera trans matrix" << endl;
+			print_vec4(v0);
+			cout << "v1 after camera trans matrix" << endl;
+			print_vec4(v1);
+			cout << "v2 after camera trans matrix" << endl;
+			print_vec4(v2);
+
 			// 3. Projection Transformation
 			v0 = multiplyMatrixWithVec4(projection_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(projection_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(projection_transformation_matrix, v2);
+
+			cout << "v0 after projection trans matrix" << endl;
+			print_vec4(v0);
+			cout << "v1 after projection trans matrix" << endl;
+			print_vec4(v1);
+			cout << "v2 after projection trans matrix" << endl;
+			print_vec4(v2);
 
 			// 4. Perspective Division
 			if (camera->projectionType == PERSPECTIVE_PROJECTION)
@@ -889,11 +954,18 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				v0 = perspective_division(v0);
 				v1 = perspective_division(v1);
 				v2 = perspective_division(v2);
+
+				cout << "v0 after perspective divide" << endl;
+				print_vec4(v0);
+				cout << "v1 after perspective divide" << endl;
+				print_vec4(v1);
+				cout << "v2 after perspective divide" << endl;
+				print_vec4(v2);
 			}
 
 			// 5. Backface Culling
 			// TODO: Check if backfaced
-			if (is_backfaced(Vec3(v0.x, v0.y, v0.z), Vec3(v1.x, v1.y, v1.z), Vec3(v2.x, v2.y, v2.z)))
+			if (this->cullingEnabled && is_backfaced(Vec3(v0.x, v0.y, v0.z), Vec3(v1.x, v1.y, v1.z), Vec3(v2.x, v2.y, v2.z)))
 				continue;
 
 			// 6. Clipping and rasterization for a linv0e
