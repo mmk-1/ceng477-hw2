@@ -997,6 +997,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			}
 			else
 			{
+				rasterize_triangle(this, camera, viewport_transformation_matrix, v0, v1, v2);
 			}
 		}
 	}
@@ -1011,8 +1012,13 @@ double calculate_f(double x, double y, double x0, double y0, double x1, double y
 	return (x * (y0 - y1)) + (y * (x1 - x0)) + (x0 * y1) - (y0 * x1);
 }
 
-void rasterize_triangle(Scene *scene, Camera *camera, Matrix4 &viewport_transformation_matrix, Vec4 &v0, Vec4 &v1, Vec4 &v2)
+void rasterize_triangle(Scene *scene, Camera *camera, Matrix4 &viewport_transformation_matrix, Vec4 v0, Vec4 v1, Vec4 v2)
 {
+
+	v0 = multiplyMatrixWithVec4(viewport_transformation_matrix, v0);
+	v1 = multiplyMatrixWithVec4(viewport_transformation_matrix, v1);
+	v2 = multiplyMatrixWithVec4(viewport_transformation_matrix, v2);
+
 	Color *c0 = scene->colorsOfVertices[v0.colorId - 1];
 	Color *c1 = scene->colorsOfVertices[v1.colorId - 1];
 	Color *c2 = scene->colorsOfVertices[v2.colorId - 1];
