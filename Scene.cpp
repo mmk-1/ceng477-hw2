@@ -676,9 +676,13 @@ Vec4 perspective_division(Vec4 &v)
 
 void draw(Scene *scene, int x, int y, Color &color, double depth)
 {
-	scene->image[x][y].r = int(round(color.r));
-	scene->image[x][y].g = int(round(color.g));
-	scene->image[x][y].b = int(round(color.b));
+	if (depth < scene->depth[x][y] - EPSILON)
+	{
+		scene->depth[x][y] = depth;
+		scene->image[x][y].r = int(round(color.r));
+		scene->image[x][y].g = int(round(color.g));
+		scene->image[x][y].b = int(round(color.b));
+	}
 }
 
 /*
@@ -812,6 +816,7 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 
 void clip_and_rasterize_line(Scene *scene, Vec4 v0, Vec4 v1, Matrix4 &viewport_transformation_matrix)
 {
+
 	std::vector<Vec4> line = std::vector<Vec4>(2);
 	std::vector<Color> line_colors = std::vector<Color>(2);
 	bool is_line_visible = false;
@@ -852,7 +857,7 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 
 	Matrix4 camera_transformation_matrix = calculate_camera_trans_matrix(camera);
 	// cout << "Camera Transformation matrix " << endl;
-	print_matrix4(camera_transformation_matrix);
+	// print_matrix4(camera_transformation_matrix);
 	// cout << "Camera orientation" << endl;
 	// print_vec4(Vec4(camera->u.x, camera->u.y, camera->u.z, 1, 0));
 	// print_vec4(Vec4(camera->v.x, camera->v.y, camera->v.z, 1, 0));
@@ -868,21 +873,21 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	// cout << "Camera near " << camera->near << endl;
 	// cout << "Camera far " << camera->far << endl;
 	// cout << "Projection Transformation matrix " << endl;
-	print_matrix4(projection_transformation_matrix);
+	// print_matrix4(projection_transformation_matrix);
 
 	Matrix4 viewport_transformation_matrix = calculate_viewport_trans_matrix(camera);
 	// cout << "camera horizontal " << camera->horRes << endl;
 	// cout << "camera vertical " << camera->verRes << endl;
 	// cout << "Viewport Transformation matrix " << endl;
-	print_matrix4(viewport_transformation_matrix);
+	// print_matrix4(viewport_transformation_matrix);
 
 	for (int m = 0; m < this->meshes.size(); m++)
 	{
 		Mesh *mesh = this->meshes[m];
 
 		Matrix4 mesh_model_transformation_matrix = calculate_model_trans_matrix(this, mesh);
-		cout << "Model Transformation matrix " << endl;
-		print_matrix4(mesh_model_transformation_matrix);
+		// cout << "Model Transformation matrix " << endl;
+		// print_matrix4(mesh_model_transformation_matrix);
 
 		// std::cout << "Model Transformation matrix " << std::endl;
 		// print_matrix4(mesh_model_transformation_matrix);
@@ -905,48 +910,48 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			Vec4 v1 = Vec4(vertix1->x, vertix1->y, vertix1->z, 1, vertix1->colorId);
 			Vec4 v2 = Vec4(vertix2->x, vertix2->y, vertix2->z, 1, vertix2->colorId);
 
-			cout << "v0" << endl;
-			print_vec4(v0);
-			cout << "v1" << endl;
-			print_vec4(v1);
-			cout << "v2" << endl;
-			print_vec4(v2);
+			// cout << "v0" << endl;
+			// print_vec4(v0);
+			// cout << "v1" << endl;
+			// print_vec4(v1);
+			// cout << "v2" << endl;
+			// print_vec4(v2);
 
 			// 1. Model Transformation
 			v0 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(mesh_model_transformation_matrix, v2);
 
-			cout << "v0 after multiply with model trans matrix" << endl;
-			print_vec4(v0);
-			cout << "v1 after multiply with model trans matrix" << endl;
-			print_vec4(v1);
-			cout << "v2 after multiply with model trans matrix" << endl;
-			print_vec4(v2);
+			// cout << "v0 after multiply with model trans matrix" << endl;
+			// print_vec4(v0);
+			// cout << "v1 after multiply with model trans matrix" << endl;
+			// print_vec4(v1);
+			// cout << "v2 after multiply with model trans matrix" << endl;
+			// print_vec4(v2);
 
 			// 2. Camera Transformation
 			v0 = multiplyMatrixWithVec4(camera_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(camera_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(camera_transformation_matrix, v2);
 
-			cout << "v0 after camera trans matrix" << endl;
-			print_vec4(v0);
-			cout << "v1 after camera trans matrix" << endl;
-			print_vec4(v1);
-			cout << "v2 after camera trans matrix" << endl;
-			print_vec4(v2);
+			// cout << "v0 after camera trans matrix" << endl;
+			// print_vec4(v0);
+			// cout << "v1 after camera trans matrix" << endl;
+			// print_vec4(v1);
+			// cout << "v2 after camera trans matrix" << endl;
+			// print_vec4(v2);
 
 			// 3. Projection Transformation
 			v0 = multiplyMatrixWithVec4(projection_transformation_matrix, v0);
 			v1 = multiplyMatrixWithVec4(projection_transformation_matrix, v1);
 			v2 = multiplyMatrixWithVec4(projection_transformation_matrix, v2);
 
-			cout << "v0 after projection trans matrix" << endl;
-			print_vec4(v0);
-			cout << "v1 after projection trans matrix" << endl;
-			print_vec4(v1);
-			cout << "v2 after projection trans matrix" << endl;
-			print_vec4(v2);
+			// cout << "v0 after projection trans matrix" << endl;
+			// print_vec4(v0);
+			// cout << "v1 after projection trans matrix" << endl;
+			// print_vec4(v1);
+			// cout << "v2 after projection trans matrix" << endl;
+			// print_vec4(v2);
 
 			// 4. Perspective Division
 			if (camera->projectionType == PERSPECTIVE_PROJECTION)
@@ -955,12 +960,12 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 				v1 = perspective_division(v1);
 				v2 = perspective_division(v2);
 
-				cout << "v0 after perspective divide" << endl;
-				print_vec4(v0);
-				cout << "v1 after perspective divide" << endl;
-				print_vec4(v1);
-				cout << "v2 after perspective divide" << endl;
-				print_vec4(v2);
+				// cout << "v0 after perspective divide" << endl;
+				// print_vec4(v0);
+				// cout << "v1 after perspective divide" << endl;
+				// print_vec4(v1);
+				// cout << "v2 after perspective divide" << endl;
+				// print_vec4(v2);
 			}
 
 			// 5. Backface Culling
@@ -968,42 +973,48 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			if (this->cullingEnabled && is_backfaced(Vec3(v0.x, v0.y, v0.z), Vec3(v1.x, v1.y, v1.z), Vec3(v2.x, v2.y, v2.z)))
 				continue;
 
-			// 6. Clipping and rasterization for a linv0e
-			clip_and_rasterize_line(this, v0, v1, viewport_transformation_matrix);
-			clip_and_rasterize_line(this, v1, v2, viewport_transformation_matrix);
-			clip_and_rasterize_line(this, v2, v0, viewport_transformation_matrix);
+			// 6. Clipping and rasterization for a line
+
+			if (mesh->type == WIREFRAME_MESH)
+			{
+				clip_and_rasterize_line(this, v0, v1, viewport_transformation_matrix);
+				clip_and_rasterize_line(this, v1, v2, viewport_transformation_matrix);
+				clip_and_rasterize_line(this, v2, v0, viewport_transformation_matrix);
+			}
+			else
+			{
+			}
 		}
 	}
-}
 
-/*
- *********************Our Implementation ends here*********************************
- */
+	/*
+	 *********************Our Implementation ends here*********************************
+	 */
 
-/*
-**********************Test functions starts here*********************************
-*/
+	/*
+	**********************Test functions starts here*********************************
+	*/
 
-void print_matrix4(Matrix4 matrix)
-{
-	for (int i = 0; i < 4; i++)
+	void print_matrix4(Matrix4 matrix)
 	{
-		cout << "[";
-		for (int j = 0; j < 4; j++)
+		for (int i = 0; i < 4; i++)
 		{
-			cout << matrix.values[i][j] << " ";
+			cout << "[";
+			for (int j = 0; j < 4; j++)
+			{
+				cout << matrix.values[i][j] << " ";
+			}
+			cout << "]" << endl;
 		}
-		cout << "]" << endl;
+		std::cout << "---------------------" << std::endl;
 	}
-	std::cout << "---------------------" << std::endl;
-}
 
-void print_vec4(Vec4 vec)
-{
-	cout << "Vec4: " << vec.x << " " << vec.y << " " << vec.z << " " << vec.t << " " << vec.colorId << endl;
-}
+	void print_vec4(Vec4 vec)
+	{
+		cout << "Vec4: " << vec.x << " " << vec.y << " " << vec.z << " " << vec.t << " " << vec.colorId << endl;
+	}
 
-void print_color(Color color)
-{
-	cout << "Color: " << color.r << " " << color.g << " " << color.b << endl;
-}
+	void print_color(Color color)
+	{
+		cout << "Color: " << color.r << " " << color.g << " " << color.b << endl;
+	}
