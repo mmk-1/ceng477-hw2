@@ -1,9 +1,9 @@
 CC = g++
 src = *.cpp
 
-all: clean rasterizer_cpp
+all: clean rasterizer
 
-rasterizer_cpp:
+rasterizer:
 	$(CC) -Wfatal-errors $(src) -std=c++11 -O3 -o rasterizer
 
 clean:

@@ -1,1 +1,1 @@
-inputs_outputs/culling_enabled_inputs/flag_czechia_alternative.xml
+inputs_outputs/culling_enabled_inputs/horse_and_mug.xml
