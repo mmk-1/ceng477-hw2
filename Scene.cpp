@@ -1006,10 +1006,106 @@ void Scene::forwardRenderingPipeline(Camera *camera)
  *********************Our Implementation ends here*********************************
  */
 
+double calculate_f(double x, double y, double x0, double y0, double x1, double y1)
+{
+	return (x * (y0 - y1)) + (y * (x1 - x0)) + (x0 * y1) - (y0 * x1);
+}
+
+void rasterize_triangle(Scene *scene, Camera *camera, Matrix4 &viewport_transformation_matrix, Vec4 &v0, Vec4 &v1, Vec4 &v2)
+{
+	Color *c0 = scene->colorsOfVertices[v0.colorId - 1];
+	Color *c1 = scene->colorsOfVertices[v1.colorId - 1];
+	Color *c2 = scene->colorsOfVertices[v2.colorId - 1];
+	int n_x = camera->horRes;
+	int n_y = camera->verRes;
+
+	// x_min and x_max
+	int x_min = min(min(v0.x, v1.x), v2.x);
+	// Boundary checks
+	if (x_min < 0)
+	{
+		x_min = 0;
+	}
+	else if (x_min > n_x - 1)
+	{
+		x_min = n_x - 1;
+	}
+
+	int x_max = max(max(v0.x, v1.x), v2.x);
+	// Boundary checks
+	if (x_max < 0)
+	{
+		x_max = 0;
+	}
+	else if (x_max > n_x - 1)
+	{
+		x_max = n_x - 1;
+	}
+
+	// y_min and y_max
+	int y_min = min(min(v0.y, v1.y), v2.y);
+	// Boundary checks
+	if (y_min < 0)
+	{
+		y_min = 0;
+	}
+	else if (y_min > n_y - 1)
+	{
+		y_min = n_y - 1;
+	}
+
+	int y_max = max(max(v0.y, v1.y), v2.y);
+	// Boundary checks
+	if (y_max < 0)
+	{
+		y_max = 0;
+	}
+	else if (y_max > n_y - 1)
+	{
+		y_max = n_y - 1;
+	}
+
+	double alpha, beta, gamma;
+	Color color;
+	for (int y = y_min; y <= y_max; y++)
+	{
+		for (int x = x_min; x <= x_max; x++)
+		{
+			// f_01(x, y) / f_01(v2.x, v2.y)
+			gamma = calculate_f(x, y, v0.x, v0.y, v1.x, v1.y) / calculate_f(v2.x, v2.y, v0.x, v0.y, v1.x, v1.y);
+			// f_12(x, y) / f_12(v0.x, v0.y)
+			alpha = calculate_f(x, y, v1.x, v1.y, v2.x, v2.y) / calculate_f(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
+			// f_20(x, y) / f_20(v1.x, v1.y)
+			beta = calculate_f(x, y, v2.x, v2.y, v0.x, v0.y) / calculate_f(v1.x, v1.y, v2.x, v2.y, v0.x, v0.y);
+
+			if (gamma >= 0 && alpha >= 0 && beta >= 0)
+			{
+				color.b = c0->b * alpha + c1->b * beta + c2->b * gamma;
+				color.g = c0->g * alpha + c1->g * beta + c2->g * gamma;
+				color.r = c0->r * alpha + c1->r * beta + c2->r * gamma;
+				// draw(scene, x, y, color, depth);
+			}
+		}
+	}
+}
+
 /*
 **********************Test functions starts here*********************************
 */
 
+void print_matrix4(Matrix4 matrix)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "[";
+		for (int j = 0; j < 4; j++)
+		{
+			cout << matrix.values[i][j] << " ";
+		}
+		cout << "]" << endl;
+	}
+	std::cout << "---------------------" << std::endl;
+}
 void print_matrix4(Matrix4 matrix)
 {
 	for (int i = 0; i < 4; i++)
