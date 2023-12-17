@@ -7,8 +7,11 @@ rasterizer_cpp:
 	$(CC) -Wfatal-errors $(src) -std=c++11 -O3 -o rasterizer
 
 clean:
-		rm -f rasterizer
+	rm -f rasterizer
 
 run: clean all
 	./rasterizer $$(cat scene.txt)
 
+rmi:
+	rm -f *.ppm
+	rm -f *.ppm.png
