@@ -619,6 +619,7 @@ std::vector<Vec4> clip_line(Scene *scene, std::vector<Vec4> &line, std::vector<C
 	double dy = line[1].y - line[0].y;
 	double dz = line[1].z - line[0].z;
 	visible = false;
+
 	if (is_visible(dx, x_min - line[0].x, te, tl) &&
 		is_visible(-dx, line[0].x - x_max, te, tl) &&
 		is_visible(dy, y_min - line[0].y, te, tl) &&
@@ -698,14 +699,6 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 	{
 		if (slope > 1)
 		{
-			std::cout << "Rasterizing line slope > 1" << std::endl;
-			printVec3(v0);
-			printVec3(v1);
-			std::cout << "x0 " << x0 << std::endl;
-			std::cout << "y0 " << y0 << std::endl;
-			std::cout << "x1 " << x1 << std::endl;
-			std::cout << "y1 " << y1 << std::endl;
-
 			int x = x0;
 			double dr = (c1.r - c0.r) / dy;
 			double dg = (c1.g - c0.g) / dy;
@@ -781,13 +774,13 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 		}
 		else
 		{
-			std::cout << "Rasterizing line slope < - 1" << std::endl;
-			printVec3(v0);
-			printVec3(v1);
-			std::cout << "x0 " << x0 << std::endl;
-			std::cout << "y0 " << y0 << std::endl;
-			std::cout << "x1 " << x1 << std::endl;
-			std::cout << "y1 " << y1 << std::endl;
+			// std::cout << "Rasterizing line slope < - 1" << std::endl;
+			// printVec3(v0);
+			// printVec3(v1);
+			// std::cout << "x0 " << x0 << std::endl;
+			// std::cout << "y0 " << y0 << std::endl;
+			// std::cout << "x1 " << x1 << std::endl;
+			// std::cout << "y1 " << y1 << std::endl;
 			int x = x0;
 			double dr = (c1.r - c0.r) / dy;
 			double dg = (c1.g - c0.g) / dy;
@@ -818,12 +811,23 @@ void clip_and_rasterize_line(Scene *scene, Vec4 v0, Vec4 v1, Matrix4 &viewport_t
 	std::vector<Vec4> line = std::vector<Vec4>(2);
 	std::vector<Color> line_colors = std::vector<Color>(2);
 	bool is_line_visible = false;
+
 	line[0] = v0;
 	line[1] = v1;
+
 	line_colors[0] = *(scene->colorsOfVertices[v0.colorId - 1]);
 	line_colors[1] = *(scene->colorsOfVertices[v1.colorId - 1]);
-
+	std::cout << "Line colors Before" << std::endl;
+	print_color(line_colors[0]);
+	print_color(line_colors[1]);
+	print_vec4(line[0]);
+	print_vec4(line[1]);
 	clip_line(scene, line, line_colors, is_line_visible);
+	std::cout << "Line colors After" << std::endl;
+	print_color(line_colors[0]);
+	print_color(line_colors[1]);
+	print_vec4(line[0]);
+	print_vec4(line[1]);
 	if (is_line_visible)
 	{
 
@@ -860,6 +864,16 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 	{
 		Mesh *mesh = this->meshes[m];
 		Matrix4 mesh_model_transformation_matrix = calculate_model_trans_matrix(this, mesh);
+
+		std::cout << "Model Transformation matrix " << std::endl;
+		print_matrix4(mesh_model_transformation_matrix);
+
+		std::cout << "Camera Transformation matrix " << std::endl;
+		print_matrix4(camera_transformation_matrix);
+
+		std::cout << "Projection Transformation matrix " << std::endl;
+		print_matrix4(projection_transformation_matrix);
+
 		for (int t = 0; t < mesh->numberOfTriangles; t++)
 		{
 			Triangle &triangle = mesh->triangles[t];
