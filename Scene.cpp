@@ -774,13 +774,6 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 		}
 		else
 		{
-			// std::cout << "Rasterizing line slope < - 1" << std::endl;
-			// printVec3(v0);
-			// printVec3(v1);
-			// std::cout << "x0 " << x0 << std::endl;
-			// std::cout << "y0 " << y0 << std::endl;
-			// std::cout << "x1 " << x1 << std::endl;
-			// std::cout << "y1 " << y1 << std::endl;
 			int x = x0;
 			double dr = (c1.r - c0.r) / dy;
 			double dg = (c1.g - c0.g) / dy;
