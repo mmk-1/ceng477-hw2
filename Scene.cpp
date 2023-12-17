@@ -676,7 +676,7 @@ Vec4 perspective_division(Vec4 &v)
 
 void draw(Scene *scene, int x, int y, Color &color, double depth)
 {
-	if (depth < scene->depth[x][y] - EPSILON)
+	if (depth <= scene->depth[x][y])
 	{
 		scene->depth[x][y] = depth;
 		scene->image[x][y].r = int(round(color.r));
@@ -702,8 +702,10 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 	}
 	int x0 = int(v0.x);
 	int y0 = int(v0.y);
+	int z0 = int(v0.z);
 	int x1 = int(v1.x);
 	int y1 = int(v1.y);
+	int z1 = int(v1.z);
 	double dx = (x1 - x0);
 	double dy = (y1 - y0);
 	double slope = dy / dx;
@@ -715,13 +717,15 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 		if (slope > 1)
 		{
 			int x = x0;
+			double dz = (z1 - z0) / dy;
+			double depth = z0;
 			double dr = (c1.r - c0.r) / dy;
 			double dg = (c1.g - c0.g) / dy;
 			double db = (c1.b - c0.b) / dy;
 			double d = (v0.x - v1.x) + .5 * (v1.y - v0.y);
 			for (int y = y0; y <= y1; y++)
 			{
-				draw(scene, x, y, c, .5);
+				draw(scene, x, y, c, depth);
 				if (d < 0)
 				{
 					x = x + 1;
@@ -734,18 +738,21 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 				c.r += dr;
 				c.g += dg;
 				c.b += db;
+				depth += dz;
 			}
 		}
 		else
 		{
 			int y = y0;
+			double dz = (z1 - z0) / dx;
+			double depth = z0;
 			double dr = (c1.r - c0.r) / dx;
 			double dg = (c1.g - c0.g) / dx;
 			double db = (c1.b - c0.b) / dx;
 			double d = (v0.y - v1.y) + .5 * (v1.x - v0.x);
 			for (int x = x0; x <= x1; x++)
 			{
-				draw(scene, x, y, c, .5);
+				draw(scene, x, y, c, depth);
 				if (d < 0)
 				{
 					y = y + 1;
@@ -758,6 +765,7 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 				c.r += dr;
 				c.g += dg;
 				c.b += db;
+				depth += dz;
 			}
 		}
 	}
@@ -766,13 +774,15 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 		if (slope > -1)
 		{
 			int y = y0;
+			double dz = (z1 - z0) / dx;
+			double depth = z0;
 			double dr = (c1.r - c0.r) / dx;
 			double dg = (c1.g - c0.g) / dx;
 			double db = (c1.b - c0.b) / dx;
 			double d = (v0.y - v1.y) - .5 * (v1.x - v0.x);
 			for (int x = x0; x <= x1; x++)
 			{
-				draw(scene, x, y, c, .5);
+				draw(scene, x, y, c, depth);
 				if (d > 0)
 				{
 					y = y - 1;
@@ -785,18 +795,21 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 				c.r += dr;
 				c.g += dg;
 				c.b += db;
+				depth += dz;
 			}
 		}
 		else
 		{
 			int x = x0;
+			double dz = (z1 - z0) / dy;
+			double depth = z0;
 			double dr = (c1.r - c0.r) / dy;
 			double dg = (c1.g - c0.g) / dy;
 			double db = (c1.b - c0.b) / dy;
 			double d = 2 * (v0.x - v1.x) + (v1.y - v0.y);
 			for (int y = y0; y >= y1; y--)
 			{
-				draw(scene, x, y, c, .5);
+				draw(scene, x, y, c, depth);
 				if (d < 0)
 				{
 					x = x + 1;
@@ -809,6 +822,7 @@ void rasterize_line(Scene *scene, Vec3 v0, Vec3 v1, Color c0, Color c1)
 				c.r -= dr;
 				c.g -= dg;
 				c.b -= db;
+				depth += dz;
 			}
 		}
 	}
@@ -986,35 +1000,36 @@ void Scene::forwardRenderingPipeline(Camera *camera)
 			}
 		}
 	}
+}
 
-	/*
-	 *********************Our Implementation ends here*********************************
-	 */
+/*
+ *********************Our Implementation ends here*********************************
+ */
 
-	/*
-	**********************Test functions starts here*********************************
-	*/
+/*
+**********************Test functions starts here*********************************
+*/
 
-	void print_matrix4(Matrix4 matrix)
+void print_matrix4(Matrix4 matrix)
+{
+	for (int i = 0; i < 4; i++)
 	{
-		for (int i = 0; i < 4; i++)
+		cout << "[";
+		for (int j = 0; j < 4; j++)
 		{
-			cout << "[";
-			for (int j = 0; j < 4; j++)
-			{
-				cout << matrix.values[i][j] << " ";
-			}
-			cout << "]" << endl;
+			cout << matrix.values[i][j] << " ";
 		}
-		std::cout << "---------------------" << std::endl;
+		cout << "]" << endl;
 	}
+	std::cout << "---------------------" << std::endl;
+}
 
-	void print_vec4(Vec4 vec)
-	{
-		cout << "Vec4: " << vec.x << " " << vec.y << " " << vec.z << " " << vec.t << " " << vec.colorId << endl;
-	}
+void print_vec4(Vec4 vec)
+{
+	cout << "Vec4: " << vec.x << " " << vec.y << " " << vec.z << " " << vec.t << " " << vec.colorId << endl;
+}
 
-	void print_color(Color color)
-	{
-		cout << "Color: " << color.r << " " << color.g << " " << color.b << endl;
-	}
+void print_color(Color color)
+{
+	cout << "Color: " << color.r << " " << color.g << " " << color.b << endl;
+}

@@ -41,7 +41,7 @@
 
 		<Mesh id="1" type="wireframe">
 			<Transformations>
-				<Transformation>r 2</Transformation>
+				<Transformation>r 1</Transformation>
 				<Transformation>t 2</Transformation>
 				<Transformation>s 1</Transformation>
 			</Transformations>

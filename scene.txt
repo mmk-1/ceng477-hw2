@@ -1,1 +1,1 @@
-inputs_outputs/clipping_example/empty_box_clipped.xml
+inputs_outputs/culling_disabled_inputs/empty_box.xml
