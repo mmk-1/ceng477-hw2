@@ -414,10 +414,10 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 
 	for (int i = 0; i < mesh->numberOfTransformations; i++)
 	{
-		cout << "tranformation type: " << mesh->transformationTypes[i] << endl;
-		cout << "transformatin id: " << mesh->transformationIds[i] << endl;
-		cout << "result matrix before transformation" << endl;
-		print_matrix4(result);
+		// cout << "tranformation type: " << mesh->transformationTypes[i] << endl;
+		// cout << "transformatin id: " << mesh->transformationIds[i] << endl;
+		// cout << "result matrix before transformation" << endl;
+		// print_matrix4(result);
 		// Be careful that transormationIds are 1-indexed
 		switch (mesh->transformationTypes[i])
 		{
@@ -425,8 +425,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Rotation *rotation = scene->rotations[mesh->transformationIds[i] - 1];
 			Matrix4 rotation_matrix = calculate_rotation_transformation(rotation);
-			cout << "rotation matrix" << endl;
-			print_matrix4(rotation_matrix);
+			// cout << "rotation matrix" << endl;
+			// print_matrix4(rotation_matrix);
 			result = multiplyMatrixWithMatrix(rotation_matrix, result);
 		}
 		break;
@@ -434,8 +434,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Translation *translation = scene->translations[mesh->transformationIds[i] - 1];
 			double translation_matrix[4][4] = {{1, 0, 0, translation->tx}, {0, 1, 0, translation->ty}, {0, 0, 1, translation->tz}, {0, 0, 0, 1}};
-			cout << "translation matrix" << endl;
-			print_matrix4(translation_matrix);
+			// cout << "translation matrix" << endl;
+			// print_matrix4(translation_matrix);
 			result = multiplyMatrixWithMatrix(translation_matrix, result);
 		}
 		break;
@@ -443,8 +443,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		{
 			Scaling *scale = scene->scalings[mesh->transformationIds[i] - 1];
 			double scale_matrix[4][4] = {{scale->sx, 0, 0, 0}, {0, scale->sy, 0, 0}, {0, 0, scale->sz, 0}, {0, 0, 0, 1}};
-			cout << "scale matrix" << endl;
-			print_matrix4(scale_matrix);
+			// cout << "scale matrix" << endl;
+			// print_matrix4(scale_matrix);
 			result = multiplyMatrixWithMatrix(scale_matrix, result);
 		}
 		break;
@@ -455,8 +455,8 @@ Matrix4 calculate_model_trans_matrix(const Scene *scene, const Mesh *mesh)
 		}
 		break;
 		}
-		cout << "result matrix after transformation" << endl;
-		print_matrix4(result);
+		// cout << "result matrix after transformation" << endl;
+		// print_matrix4(result);
 	}
 	return result;
 }
@@ -1089,7 +1089,8 @@ void rasterize_triangle(Scene *scene, Camera *camera, Matrix4 &viewport_transfor
 				color.b = c0->b * alpha + c1->b * beta + c2->b * gamma;
 				color.g = c0->g * alpha + c1->g * beta + c2->g * gamma;
 				color.r = c0->r * alpha + c1->r * beta + c2->r * gamma;
-				// draw(scene, x, y, color, depth);
+				double depth = v0.z * alpha + v1.z * beta + v2.z * gamma;
+				draw(scene, x, y, color, depth);
 			}
 		}
 	}
